@@ -80,6 +80,38 @@ app_update "$APP_PATH"
 }
 
 ###########################################################
+# Reiniciar aplicación
+###########################################################
+
+reiniciar_app()
+{
+
+APP_ID="$1"
+
+if [ -z "$APP_ID" ]; then
+
+    echo "❌ Falta indicar aplicación"
+    return 1
+
+fi
+
+
+APP_PATH=$(app_find "$APP_ID")
+
+
+if [ -z "$APP_PATH" ]; then
+
+    echo "❌ Aplicación no encontrada: $APP_ID"
+    return 1
+
+fi
+
+
+app_restart "$APP_PATH"
+
+}
+
+###########################################################
 # Menú
 ###########################################################
 
@@ -94,6 +126,12 @@ list)
 update)
 
     actualizar_app "$2"
+    ;;
+
+
+restart)
+
+    reiniciar_app "$2"
     ;;
 
 

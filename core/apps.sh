@@ -155,3 +155,46 @@ else
 fi
 
 }
+
+###########################################################
+# Reiniciar aplicación
+###########################################################
+
+app_restart()
+{
+
+APP_PATH="$1"
+
+if [ -z "$APP_PATH" ]; then
+    return 1
+fi
+
+
+app_load "$APP_PATH" || return 1
+
+
+echo
+echo "🔄 Reiniciando $APP_NAME"
+echo
+
+
+cd "$APP_DATA" || return 1
+
+
+docker compose -f "$APP_COMPOSE" restart
+
+
+if [ $? -eq 0 ]; then
+
+    echo
+    echo "✅ $APP_NAME reiniciado"
+
+else
+
+    echo
+    echo "❌ Error reiniciando $APP_NAME"
+    return 1
+
+fi
+
+}
