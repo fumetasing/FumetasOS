@@ -1,0 +1,54 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Watch
+###########################################################
+
+LOG="/tmp/fumetaos-watch.alert"
+
+MENSAJE="🚨 FumetaOS
+
+"
+
+ERROR=0
+
+for MODULO in \
+    /opt/fumetaos/modules/monitor/services.sh \
+    /opt/fumetaos/modules/monitor/smart.sh \
+    /opt/fumetaos/modules/monitor/temperature.sh \
+    /opt/fumetaos/modules/monitor/disks.sh \
+    /opt/fumetaos/modules/monitor/memory.sh \
+    /opt/fumetaos/modules/monitor/updates.sh
+do
+
+    SALIDA=$("$MODULO" --watch)
+    RET=$?
+
+    if [ "$RET" -eq 20 ]; then
+
+        MENSAJE+="• $SALIDA\n"
+
+        ERROR=20
+
+    fi
+
+done
+
+if [ "$ERROR" -eq 20 ]; then
+
+    if [ ! -f "$LOG" ]; then
+
+        printf "%b" "$MENSAJE" | telegram-notify
+
+        touch "$LOG"
+
+    fi
+
+else
+
+    rm -f "$LOG"
+
+fi
+
+exit "$ERROR"

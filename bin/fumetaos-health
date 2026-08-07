@@ -1,0 +1,67 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Health
+###########################################################
+
+ERROR=0
+
+echo
+echo "🖥️ FumetaOS"
+echo
+
+echo "🛠️ Servicios"
+/opt/fumetaos/modules/monitor/services.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+echo
+echo "💚 SMART"
+/opt/fumetaos/modules/monitor/smart.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+echo
+echo "🌡️ Temperatura"
+/opt/fumetaos/modules/monitor/temperature.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+echo
+echo "💾 Discos"
+/opt/fumetaos/modules/monitor/disks.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+echo
+echo "🧠 Memoria"
+/opt/fumetaos/modules/monitor/memory.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+echo
+echo "📦 Actualizaciones"
+/opt/fumetaos/modules/monitor/updates.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+echo
+
+case "$ERROR" in
+
+    0)
+        echo "🟢 Estado general: PERFECTO"
+        ;;
+
+    10)
+        echo "🟡 Estado general: AVISOS"
+        ;;
+
+    *)
+        echo "🔴 Estado general: REVISAR"
+        ;;
+
+esac
+
+exit "$ERROR"

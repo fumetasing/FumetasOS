@@ -1,0 +1,94 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Comando principal
+###########################################################
+
+###########################################################
+# Cargar núcleo FumetaOS
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+
+###########################################################
+# Ejecutar comandos
+###########################################################
+
+case "$1" in
+
+health)
+
+    exec "$BIN_DIR/fumetaos-health"
+    ;;
+
+
+status)
+
+    exec "$BIN_DIR/fumetaos-status"
+    ;;
+
+
+watch)
+
+    exec "$BIN_DIR/fumetaos-watch"
+    ;;
+
+
+report)
+
+    exec "$BIN_DIR/fumetaos-report"
+    ;;
+
+
+doctor)
+
+    exec "$BIN_DIR/fumetaos-doctor"
+    ;;
+
+
+version)
+
+    exec "$BIN_DIR/fumetaos-version"
+    ;;
+
+
+backup)
+
+    shift
+    exec "$BIN_DIR/fumetaos-backup" "$@"
+    ;;
+
+
+history)
+
+    shift
+    exec "$BIN_DIR/fumetaos-history" "$@"
+    ;;
+
+
+app)
+
+    shift
+    exec "$BIN_DIR/fumetaos-app" "$@"
+    ;;
+
+
+update)
+
+    exec sudo "$INSTALL_DIR/update.sh" --update
+    ;;
+
+
+config)
+
+    sudo nano "$CONFIG_FILE"
+    ;;
+
+
+*)
+
+    exec "$BIN_DIR/fumetaos-dashboard"
+    ;;
+
+esac

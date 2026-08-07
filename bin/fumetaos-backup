@@ -1,0 +1,360 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Backup
+###########################################################
+
+BACKUP_DIR="/mnt/datos/backups/fumetaos"
+
+
+crear_backup()
+{
+
+DATE=$(date +"%Y-%m-%d_%H-%M")
+FILE="fumetaos-backup-$DATE.tar.gz"
+
+TEMP="/tmp/fumetaos-backup"
+
+
+echo
+echo "🖥️ FumetaOS Backup"
+echo
+
+echo "📦 Preparando copia..."
+echo
+
+
+rm -rf "$TEMP"
+mkdir -p "$TEMP"
+
+
+echo "✅ Configuración"
+cp -r /opt/fumetaos/config "$TEMP/"
+
+
+echo "✅ Scripts"
+cp -r /opt/fumetaos/bin "$TEMP/"
+
+
+echo "✅ Core"
+cp -r /opt/fumetaos/core "$TEMP/"
+
+
+echo "✅ Módulos"
+cp -r /opt/fumetaos/modules "$TEMP/"
+
+
+echo "✅ Servicios"
+
+mkdir -p "$TEMP/services"
+
+cp /etc/systemd/system/fumetaos-*.service "$TEMP/services/" 2>/dev/null
+cp /etc/systemd/system/fumetaos-*.timer "$TEMP/services/" 2>/dev/null
+
+
+echo "✅ Versión"
+cp /opt/fumetaos/VERSION "$TEMP/"
+
+
+echo
+
+mkdir -p "$BACKUP_DIR"
+
+
+if tar -czf "$BACKUP_DIR/$FILE" -C "$TEMP" .
+then
+
+    echo "💾 Backup creado:"
+    echo
+    echo "$BACKUP_DIR/$FILE"
+
+else
+
+    echo "🔴 Error creando backup"
+    exit 20
+
+fi
+
+
+rm -rf "$TEMP"
+
+echo
+
+}
+
+
+listar_backups()
+{
+
+echo
+echo "🖥️ FumetaOS Backup"
+echo
+
+echo "💾 Backups disponibles"
+echo
+
+
+ls -lh "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null
+
+
+echo
+
+}
+
+
+informacion_backup()
+{
+
+BACKUP=$(ls -1t "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null | head -n 1)
+
+
+if [ -z "$BACKUP" ]; then
+
+    echo
+    echo "🔴 No hay backups disponibles"
+    exit 20
+
+fi
+
+
+echo
+echo "🖥️ FumetaOS Backup Info"
+echo
+
+echo "📦 Último backup"
+echo
+
+echo "$(basename "$BACKUP")"
+
+echo
+
+echo "📅 Fecha"
+date -r "$BACKUP" "+%Y-%m-%d %H:%M"
+
+echo
+
+echo "💾 Tamaño"
+du -h "$BACKUP" | awk '{print $1}'
+
+echo
+
+echo "🏷️ Versión"
+
+if [ -f /opt/fumetaos/VERSION ]; then
+    cat /opt/fumetaos/VERSION
+else
+    echo "Desconocida"
+fi
+
+echo
+
+echo "📁 Contenido"
+
+tar -tzf "$BACKUP" 2>/dev/null \
+| sed 's#^\./##' \
+| cut -d/ -f1 \
+| grep -v '^$' \
+| sort -u \
+| while read ITEM
+do
+
+    case "$ITEM" in
+
+        bin)
+            echo "✅ Scripts"
+            ;;
+
+        config)
+            echo "✅ Configuración"
+            ;;
+
+        core)
+            echo "✅ Core"
+            ;;
+
+        modules)
+            echo "✅ Módulos"
+            ;;
+
+        services)
+            echo "✅ Servicios"
+            ;;
+
+        VERSION)
+            echo "✅ Versión"
+            ;;
+
+    esac
+
+done
+
+echo
+
+}
+
+
+limpiar_backups()
+{
+
+KEEP=7
+
+echo
+echo "🧹 FumetaOS Backup Clean"
+echo
+
+echo "Manteniendo últimos $KEEP backups"
+echo
+
+
+TOTAL=$(ls "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null | wc -l)
+
+
+if [ "$TOTAL" -le "$KEEP" ]; then
+
+    echo "✅ No hay backups antiguos que limpiar"
+    exit 0
+
+fi
+
+
+BORRAR=$((TOTAL-KEEP))
+
+
+ls -1t "$BACKUP_DIR"/fumetaos-backup-* | tail -n "$BORRAR" | while read FILE
+do
+
+    echo "🗑️ Eliminando:"
+    echo "$(basename "$FILE")"
+
+    rm -f "$FILE"
+
+done
+
+
+echo
+echo "✅ Limpieza completada"
+echo
+
+}
+
+
+restaurar_backup()
+{
+
+BACKUP=$(ls -1t "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null | head -n 1)
+
+
+if [ -z "$BACKUP" ]; then
+
+    echo
+    echo "🔴 No hay backups disponibles"
+    exit 20
+
+fi
+
+
+echo
+echo "🖥️ FumetaOS Restore"
+echo
+
+echo "Backup seleccionado:"
+echo
+
+echo "$BACKUP"
+
+echo
+
+read -p "¿Restaurar este backup? [s/N] " RESPUESTA
+
+
+if [ "$RESPUESTA" != "s" ] && [ "$RESPUESTA" != "S" ]; then
+
+    echo
+    echo "❌ Restauración cancelada"
+    exit 0
+
+fi
+
+
+TEMP="/tmp/fumetaos-restore"
+
+rm -rf "$TEMP"
+mkdir -p "$TEMP"
+
+
+tar -xzf "$BACKUP" -C "$TEMP"
+
+
+echo
+echo "🔄 Restaurando..."
+
+cp -r "$TEMP/config" /opt/fumetaos/
+cp -r "$TEMP/bin" /opt/fumetaos/
+cp -r "$TEMP/core" /opt/fumetaos/
+cp -r "$TEMP/modules" /opt/fumetaos/
+cp "$TEMP/VERSION" /opt/fumetaos/
+
+
+if [ -d "$TEMP/services" ]; then
+
+    cp "$TEMP/services/"* /etc/systemd/system/ 2>/dev/null
+
+fi
+
+
+systemctl daemon-reload
+
+
+rm -rf "$TEMP"
+
+
+echo
+echo "✅ Restauración completada"
+echo
+
+}
+
+
+case "$1" in
+
+list)
+
+    listar_backups
+    ;;
+
+info)
+
+    informacion_backup
+    ;;
+
+clean)
+
+    limpiar_backups
+    ;;
+
+restore)
+
+    restaurar_backup
+    ;;
+
+"")
+
+    crear_backup
+    ;;
+
+*)
+
+    echo
+    echo "Uso:"
+    echo
+    echo "fumetaos backup"
+    echo "fumetaos backup list"
+    echo "fumetaos backup info"
+    echo "fumetaos backup clean"
+    echo "fumetaos backup restore"
+    echo
+
+    ;;
+
+esac

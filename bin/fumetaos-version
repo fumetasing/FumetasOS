@@ -1,0 +1,47 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Version
+###########################################################
+
+###########################################################
+# Cargar núcleo FumetaOS
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+source "$CORE_DIR/system.sh"
+
+###########################################################
+# Versión
+###########################################################
+
+if [ -f "$VERSION_FILE" ]; then
+
+    FUMETAOS_VERSION="$(cat "$VERSION_FILE")"
+
+else
+
+    FUMETAOS_VERSION="desconocida"
+
+fi
+
+###########################################################
+# Información
+###########################################################
+
+echo
+echo "🖥️ FumetaOS"
+echo
+
+echo "Versión: $FUMETAOS_VERSION"
+echo
+
+echo "Sistema: $(. /etc/os-release && echo "$PRETTY_NAME")"
+echo "Kernel:  $(uname -r)"
+echo
+
+echo "Hardware: Mac mini Late 2012"
+echo "CPU: $(lscpu | awk -F: '/Model name/ {gsub(/^ +/,"",$2); print $2; exit}')"
+echo "RAM: $(ram_total)"
+echo

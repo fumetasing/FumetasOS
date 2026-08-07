@@ -1,0 +1,77 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Apps
+###########################################################
+
+###########################################################
+# Cargar núcleo FumetaOS
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+source "$CORE_DIR/apps.sh"
+
+###########################################################
+# Lista aplicaciones
+###########################################################
+
+listar_apps()
+{
+
+echo
+echo "📦 Aplicaciones"
+echo
+
+FOUND=0
+
+for APP in $(app_list)
+do
+
+    app_load "$APP"
+
+    printf "🟢 %-15s (%s)\n" "$APP_NAME" "$APP_TYPE"
+
+    FOUND=1
+
+done
+
+
+if [ "$FOUND" -eq 0 ]; then
+
+    echo "No hay aplicaciones registradas."
+
+fi
+
+echo
+
+}
+
+###########################################################
+# Menú
+###########################################################
+
+case "$1" in
+
+list)
+
+    listar_apps
+    ;;
+
+
+*)
+
+    echo
+    echo "Uso:"
+    echo
+    echo "fumetaos app list"
+    echo "fumetaos app install <app>"
+    echo "fumetaos app update <app>"
+    echo "fumetaos app restart <app>"
+    echo "fumetaos app remove <app>"
+    echo "fumetaos app logs <app>"
+    echo
+
+    ;;
+
+esac

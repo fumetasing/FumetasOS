@@ -1,0 +1,43 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Status
+###########################################################
+
+source /opt/fumetaos/core/common.sh
+
+CPU=$(sensors | awk '/Package id 0:/ {gsub("\\+|°C","",$4); print int($4)}')
+RAM=$(free | awk '/Mem:/ {printf "%.0f", $3/$2*100}')
+DISCO=$(df /mnt/datos | awk 'NR==2 {gsub("%","",$5); print $5}')
+UPDATES=$(apt list --upgradable 2>/dev/null | tail -n +2 | wc -l)
+
+ESTADO="🟢 PERFECTO"
+
+if [ "$CPU" -ge "$CPU_WARNING" ] || \
+   [ "$RAM" -ge "$RAM_WARNING" ] || \
+   [ "$DISCO" -ge "$DISK_WARNING" ] || \
+   [ "$UPDATES" -gt 0 ]; then
+
+    ESTADO="🟡 AVISOS"
+
+fi
+
+if [ "$CPU" -ge "$CPU_CRITICAL" ] || \
+   [ "$RAM" -ge "$RAM_CRITICAL" ] || \
+   [ "$DISCO" -ge "$DISK_CRITICAL" ]; then
+
+    ESTADO="🔴 REVISAR"
+
+fi
+
+echo
+echo "🖥️ FumetaOS"
+echo
+echo "Estado: $ESTADO"
+echo
+echo "🌡️ CPU: ${CPU}°C"
+echo "🧠 RAM: ${RAM}%"
+echo "💾 Disco: ${DISCO}%"
+echo "📦 Actualizaciones: $UPDATES"
+echo

@@ -1,0 +1,33 @@
+###########################################################
+# FumetaOS
+# Git Ignore
+###########################################################
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Backups
+*.bak
+*.old
+
+# Archivos temporales
+tmp/
+cache/
+
+# Datos locales
+data/
+
+# Credenciales locales
+.env
+
+# Configuración privada
+config/fumetaos.conf

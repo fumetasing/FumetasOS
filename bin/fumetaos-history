@@ -1,0 +1,212 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# History
+###########################################################
+
+DATA_DIR="/opt/fumetaos/data"
+LOG_FILE="$DATA_DIR/history.log"
+
+
+registrar()
+{
+
+DATE=$(date +"%Y-%m-%d %H:%M:%S")
+
+CPU=$(sensors | awk '/Package id 0:/ {gsub("\\+|°C","",$4); print int($4)}')
+
+RAM=$(free | awk '/Mem:/ {printf "%.0f", $3/$2*100}')
+
+DISK=$(df /mnt/datos | awk 'NR==2 {gsub("%","",$5); print $5}')
+
+UPTIME=$(uptime -p | sed 's/up //')
+
+
+mkdir -p "$DATA_DIR"
+
+
+echo "$DATE CPU=${CPU} RAM=${RAM} DISK=${DISK} UPTIME=\"${UPTIME}\"" >> "$LOG_FILE"
+
+
+echo
+echo "📊 FumetaOS History"
+echo
+
+echo "✅ Registro guardado"
+echo
+
+}
+
+
+mostrar_resumen()
+{
+
+FILTRO="$1"
+
+echo
+echo "📊 FumetaOS Histórico $FILTRO"
+echo
+
+
+if [ ! -f "$LOG_FILE" ]; then
+
+    echo "No hay datos históricos"
+    exit 0
+
+fi
+
+
+if [ "$FILTRO" = "24 horas" ]; then
+
+    DATOS=$(tail -144 "$LOG_FILE")
+
+elif [ "$FILTRO" = "7 días" ]; then
+
+    DATOS=$(tail -1008 "$LOG_FILE")
+
+elif [ "$FILTRO" = "30 días" ]; then
+
+    DATOS=$(tail -4320 "$LOG_FILE")
+
+else
+
+    DATOS=$(cat "$LOG_FILE")
+
+fi
+
+
+TOTAL=$(echo "$DATOS" | wc -l)
+
+
+CPU_ACTUAL=$(echo "$DATOS" | tail -1 | awk '{print $3}' | cut -d= -f2)
+RAM_ACTUAL=$(echo "$DATOS" | tail -1 | awk '{print $4}' | cut -d= -f2)
+DISK_ACTUAL=$(echo "$DATOS" | tail -1 | awk '{print $5}' | cut -d= -f2)
+
+
+CPU_MEDIA=$(echo "$DATOS" | awk -F'CPU=' '{print $2}' | awk '{sum+=$1} END {if(NR>0) printf "%.0f",sum/NR}')
+
+CPU_MAX=$(echo "$DATOS" | awk -F'CPU=' '{print $2}' | awk '{print $1}' | sort -nr | head -1)
+
+
+RAM_MEDIA=$(echo "$DATOS" | awk -F'RAM=' '{print $2}' | awk '{sum+=$1} END {if(NR>0) printf "%.0f",sum/NR}')
+
+RAM_MAX=$(echo "$DATOS" | awk -F'RAM=' '{print $2}' | awk '{print $1}' | sort -nr | head -1)
+
+
+echo "📈 Registros: $TOTAL"
+echo
+
+echo "🌡️ CPU"
+echo "Actual...... ${CPU_ACTUAL}°C"
+echo "Media....... ${CPU_MEDIA}°C"
+echo "Máxima...... ${CPU_MAX}°C"
+echo
+
+echo "🧠 RAM"
+echo "Actual...... ${RAM_ACTUAL}%"
+echo "Media....... ${RAM_MEDIA}%"
+echo "Máxima...... ${RAM_MAX}%"
+echo
+
+echo "💾 Disco Datos"
+echo "Actual...... ${DISK_ACTUAL}%"
+echo
+
+}
+
+
+limpiar()
+{
+
+DIAS=90
+
+echo
+echo "🧹 FumetaOS History Clean"
+echo
+
+if [ ! -f "$LOG_FILE" ]; then
+
+    echo "No hay histórico"
+    exit 0
+
+fi
+
+
+ANTES=$(wc -l < "$LOG_FILE")
+
+
+FECHA=$(date -d "-$DIAS days" +"%Y-%m-%d")
+
+
+grep "^$FECHA\|^[0-9]" "$LOG_FILE" > /tmp/fumetaos-history-clean
+
+
+mv /tmp/fumetaos-history-clean "$LOG_FILE"
+
+
+DESPUES=$(wc -l < "$LOG_FILE")
+
+
+BORRADOS=$((ANTES-DESPUES))
+
+
+echo "📅 Conservando últimos $DIAS días"
+echo
+
+echo "🗑️ Registros eliminados: $BORRADOS"
+
+echo "✅ Limpieza completada"
+echo
+
+}
+
+
+case "$1" in
+
+record)
+
+    registrar
+    ;;
+
+day)
+
+    mostrar_resumen "24 horas"
+    ;;
+
+week)
+
+    mostrar_resumen "7 días"
+    ;;
+
+month)
+
+    mostrar_resumen "30 días"
+    ;;
+
+clean)
+
+    limpiar
+    ;;
+
+"")
+
+    mostrar_resumen "General"
+    ;;
+
+*)
+
+    echo
+    echo "Uso:"
+    echo
+    echo "fumetaos history"
+    echo "fumetaos history record"
+    echo "fumetaos history day"
+    echo "fumetaos history week"
+    echo "fumetaos history month"
+    echo "fumetaos history clean"
+    echo
+
+    ;;
+
+esac

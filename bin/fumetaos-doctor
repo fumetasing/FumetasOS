@@ -1,0 +1,158 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Doctor
+###########################################################
+
+###########################################################
+# Cargar núcleo FumetaOS
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+source "$CORE_DIR/apps.sh"
+
+###########################################################
+# Variables
+###########################################################
+
+PUNTOS=0
+TOTAL=0
+
+###########################################################
+# Comprobación general
+###########################################################
+
+check()
+{
+
+DESCRIPCION="$1"
+shift
+
+TOTAL=$((TOTAL+1))
+
+if "$@"
+then
+    echo "✅ $DESCRIPCION"
+    PUNTOS=$((PUNTOS+1))
+else
+    echo "❌ $DESCRIPCION"
+fi
+
+}
+
+###########################################################
+# Inicio
+###########################################################
+
+echo
+echo "🩺 FumetaOS Doctor"
+echo
+
+###########################################################
+# Sistema
+###########################################################
+
+echo "📁 Sistema"
+echo
+
+check "Configuración" test -f "$CONFIG_FILE"
+
+check "Versión" test -f "$VERSION_FILE"
+
+check "Scripts ejecutables" test -x "$BIN_DIR/fumetaos"
+
+###########################################################
+# Servicios
+###########################################################
+
+echo
+echo "⚙️ Servicios"
+echo
+
+check "Docker" systemctl is-active --quiet docker
+
+check "CasaOS" systemctl is-active --quiet casaos
+
+check "Tailscale" systemctl is-active --quiet tailscaled
+
+###########################################################
+# FumetaOS
+###########################################################
+
+echo
+echo "🖥️ FumetaOS"
+echo
+
+check "Watch activo" systemctl is-active --quiet fumetaos-watch.timer
+
+check "History activo" systemctl is-active --quiet fumetaos-history.timer
+
+###########################################################
+# Aplicaciones
+###########################################################
+
+echo
+echo "📦 Aplicaciones"
+echo
+
+for APP in $(app_list)
+do
+
+    app_load "$APP"
+
+    TOTAL=$((TOTAL+1))
+
+    if app_running
+    then
+        echo "✅ $APP_NAME"
+        PUNTOS=$((PUNTOS+1))
+    else
+        echo "❌ $APP_NAME"
+    fi
+
+done
+
+###########################################################
+# Datos
+###########################################################
+
+echo
+echo "💾 Datos"
+echo
+
+check "Backup disponible" test -n "$(ls /mnt/datos/backups/fumetaos/fumetaos-backup-* 2>/dev/null | head -1)"
+
+check "Histórico funcionando" test -s "$DATA_DIR/history.log"
+
+###########################################################
+# Resultado
+###########################################################
+
+echo
+
+PORCENTAJE=$((PUNTOS*100/TOTAL))
+
+echo "Resultado: $PUNTOS/$TOTAL (${PORCENTAJE}%)"
+
+if [ "$PORCENTAJE" -eq 100 ]; then
+
+    echo "Estado: 🟢 PERFECTO"
+
+elif [ "$PORCENTAJE" -ge 80 ]; then
+
+    echo "Estado: 🟡 BUENO"
+
+else
+
+    echo "Estado: 🔴 REVISAR"
+
+fi
+
+echo
+
+echo "🏷️ Versión FumetaOS"
+
+cat "$VERSION_FILE" 2>/dev/null
+
+echo
