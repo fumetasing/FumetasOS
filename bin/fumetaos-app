@@ -48,6 +48,38 @@ echo
 }
 
 ###########################################################
+# Actualizar aplicación
+###########################################################
+
+actualizar_app()
+{
+
+APP_ID="$1"
+
+if [ -z "$APP_ID" ]; then
+
+    echo "❌ Falta indicar aplicación"
+    return 1
+
+fi
+
+
+APP_PATH=$(app_find "$APP_ID")
+
+
+if [ -z "$APP_PATH" ]; then
+
+    echo "❌ Aplicación no encontrada: $APP_ID"
+    return 1
+
+fi
+
+
+app_update "$APP_PATH"
+
+}
+
+###########################################################
 # Menú
 ###########################################################
 
@@ -56,6 +88,12 @@ case "$1" in
 list)
 
     listar_apps
+    ;;
+
+
+update)
+
+    actualizar_app "$2"
     ;;
 
 
