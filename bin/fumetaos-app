@@ -136,6 +136,40 @@ echo
 }
 
 
+info_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_load "$APP_PATH" || return 1
+
+
+echo
+echo "📦 Información de $APP_NAME"
+echo
+
+echo "ID: $APP_ID"
+echo "Nombre: $APP_NAME"
+echo "Tipo: $APP_TYPE"
+echo "Versión: $APP_VERSION"
+echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo "Compose: $APP_COMPOSE"
+echo "Datos: $APP_DATA"
+
+echo
+
+if app_running
+then
+    echo "Estado: 🟢 Ejecutando"
+else
+    echo "Estado: 🔴 Detenido"
+fi
+
+echo
+
+}
+
+
 eliminar_app()
 {
 
@@ -208,6 +242,12 @@ version)
     ;;
 
 
+info)
+
+    info_app "$2"
+    ;;
+
+
 remove)
 
     eliminar_app "$2"
@@ -226,6 +266,7 @@ remove)
     echo "fumetaos app logs <app>"
     echo "fumetaos app status <app>"
     echo "fumetaos app version <app>"
+    echo "fumetaos app info <app>"
     echo "fumetaos app remove <app>"
     echo
 
