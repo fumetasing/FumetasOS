@@ -11,6 +11,43 @@ source /opt/fumetaos/core/apps.sh
 
 ERROR=0
 
+TOTAL=0
+ACTIVE=0
+FAILED=0
+
+
+echo
+
+
+for APP in $(app_list)
+do
+
+    TOTAL=$((TOTAL+1))
+
+done
+
+
+echo "Total: $TOTAL"
+
+
+for APP in $(app_list)
+do
+
+    app_load "$APP" || continue
+
+
+    if app_running
+    then
+        ACTIVE=$((ACTIVE+1))
+    else
+        FAILED=$((FAILED+1))
+    fi
+
+done
+
+
+echo "Activas: $ACTIVE"
+echo "Problemas: $FAILED"
 
 echo
 
@@ -79,6 +116,11 @@ do
     echo
 
 done
+
+
+if [ "$FAILED" -gt 0 ]; then
+    ERROR=20
+fi
 
 
 exit "$ERROR"
