@@ -9,6 +9,28 @@ source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/apps.sh"
 
 
+ayuda_app()
+{
+
+echo
+echo "Uso:"
+echo
+echo "fumetaos app list"
+echo "fumetaos app install <app>"
+echo "fumetaos app update <app>"
+echo "fumetaos app restart <app>"
+echo "fumetaos app logs <app>"
+echo "fumetaos app status <app>"
+echo "fumetaos app check <app>"
+echo "fumetaos app version <app>"
+echo "fumetaos app info <app>"
+echo "fumetaos app remove <app>"
+echo "fumetaos app help"
+echo
+
+}
+
+
 listar_apps()
 {
 
@@ -286,23 +308,15 @@ remove)
     ;;
 
 
+help)
+
+    ayuda_app
+    ;;
+
+
 *)
 
-    echo
-    echo "Uso:"
-    echo
-    echo "fumetaos app list"
-    echo "fumetaos app install <app>"
-    echo "fumetaos app update <app>"
-    echo "fumetaos app restart <app>"
-    echo "fumetaos app logs <app>"
-    echo "fumetaos app status <app>"
-    echo "fumetaos app check <app>"
-    echo "fumetaos app version <app>"
-    echo "fumetaos app info <app>"
-    echo "fumetaos app remove <app>"
-    echo
-
+    ayuda_app
     ;;
 
 esac
