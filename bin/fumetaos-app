@@ -141,6 +141,24 @@ eliminar_app()
 
 APP_PATH=$(resolver_app "$1") || return 1
 
+app_load "$APP_PATH" || return 1
+
+
+echo
+echo "⚠️ Vas a eliminar $APP_NAME"
+echo "¿Continuar? (y/N)"
+
+read -r CONFIRM
+
+
+if [ "$CONFIRM" != "y" ]; then
+
+    echo "❌ Cancelado"
+    return 1
+
+fi
+
+
 app_remove "$APP_PATH"
 
 }
