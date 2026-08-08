@@ -112,6 +112,38 @@ app_restart "$APP_PATH"
 }
 
 ###########################################################
+# Mostrar logs aplicación
+###########################################################
+
+logs_app()
+{
+
+APP_ID="$1"
+
+if [ -z "$APP_ID" ]; then
+
+    echo "❌ Falta indicar aplicación"
+    return 1
+
+fi
+
+
+APP_PATH=$(app_find "$APP_ID")
+
+
+if [ -z "$APP_PATH" ]; then
+
+    echo "❌ Aplicación no encontrada: $APP_ID"
+    return 1
+
+fi
+
+
+app_logs "$APP_PATH"
+
+}
+
+###########################################################
 # Menú
 ###########################################################
 
@@ -135,16 +167,20 @@ restart)
     ;;
 
 
+logs)
+
+    logs_app "$2"
+    ;;
+
+
 *)
 
     echo
     echo "Uso:"
     echo
     echo "fumetaos app list"
-    echo "fumetaos app install <app>"
     echo "fumetaos app update <app>"
     echo "fumetaos app restart <app>"
-    echo "fumetaos app remove <app>"
     echo "fumetaos app logs <app>"
     echo
 
