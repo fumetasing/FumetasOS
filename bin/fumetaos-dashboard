@@ -1,7 +1,8 @@
 #!/bin/bash
 
 ###########################################################
-# FumetaOS Dashboard v3
+# FumetaOS Dashboard v3.1
+# Terminal Console
 ###########################################################
 
 source /opt/fumetaos/core/common.sh
@@ -10,47 +11,55 @@ source /opt/fumetaos/core/apps.sh
 
 
 WIDTH=42
-INNER=$((WIDTH-2))
+INNER=40
 
+
+VERSION="desconocida"
+
+if [ -f "$VERSION_FILE" ]; then
+    VERSION=$(cat "$VERSION_FILE")
+fi
+
+
+###########################################################
+# Caja
+###########################################################
 
 line()
 {
-printf '═%.0s' $(seq 1 "$INNER")
+    printf '═%.0s' $(seq 1 $INNER)
 }
 
 
 top()
 {
-echo "╔$(line)╗"
+    echo "╔$(line)╗"
 }
 
 
 bottom()
 {
-echo "╚$(line)╝"
+    echo "╚$(line)╝"
 }
 
 
 separator()
 {
-echo "╠$(line)╣"
+    echo "╠$(line)╣"
 }
 
 
 box()
 {
+    TEXT="$1"
 
-TEXT="$1"
-
-printf "║ %-38s ║\n" "$TEXT"
-
+    printf "║ %-38s ║\n" "$TEXT"
 }
 
 
-VERSION="desconocida"
-
-[ -f "$VERSION_FILE" ] && VERSION=$(cat "$VERSION_FILE")
-
+###########################################################
+# Datos
+###########################################################
 
 CPU=$(cpu_temp)
 RAM=$(ram_usage)
@@ -64,86 +73,107 @@ UPDATES=$(updates_available)
 
 if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1
 then
-    ESTADO="🟢 PERFECTO"
+    STATUS="PERFECTO"
 else
-    ESTADO="🟡 AVISOS"
+    STATUS="AVISOS"
 fi
 
 
+###########################################################
+# Render
+###########################################################
+
 top
 
-box "🖥️ FumetaOS v$VERSION"
+
+box "FumetaOS v$VERSION"
+
 
 separator
 
-box "🟢 Estado: $ESTADO"
+
+box "ESTADO: $STATUS"
+
 
 separator
 
-box "📊 Recursos"
-box "🌡️ CPU: ${CPU}°C"
-box "🧠 RAM: ${RAM}%"
-box "💾 Sistema: ${SYSTEM_DISK}%"
+
+box "RECURSOS"
+
+box "CPU:              ${CPU} C"
+
+box "RAM:              ${RAM} %"
+
+box "SISTEMA:          ${SYSTEM_DISK} %"
+
+
 
 separator
 
-box "📦 Aplicaciones"
+
+box "APLICACIONES"
 
 
 for APP in $(app_list)
 do
 
-app_load "$APP"
+    app_load "$APP"
 
 
-if app_running
-then
-ICON="🟢"
-else
-ICON="🔴"
-fi
+    if app_running
+    then
+        ICON="[OK]"
+    else
+        ICON="[--]"
+    fi
 
 
-box "$ICON $APP_NAME"
-box "   Version: $APP_VERSION"
-box "   Health: $(app_health)"
+    box "$ICON $APP_NAME"
 
+    box "     Version: $APP_VERSION"
+
+    box "     Health: $(app_health)"
 
 done
 
 
+
 separator
 
-box "🛠️ Servicios"
+
+box "SERVICIOS"
 
 
 for SERVICE in docker ssh tailscaled
 do
 
-if systemctl is-active --quiet "$SERVICE"
-then
-box "🟢 $SERVICE"
-else
-box "🔴 $SERVICE"
-fi
+    if systemctl is-active --quiet "$SERVICE"
+    then
+        box "[OK] $SERVICE"
+    else
+        box "[--] $SERVICE"
+    fi
 
 done
 
 
-separator
-
-box "💾 Almacenamiento"
-
-box "🟢 SSD Sistema"
-box "   Uso: ${SYSTEM_DISK}%"
-
-box "🟢 HDD Datos"
-box "   Uso: ${DATA_DISK}%"
-
 
 separator
 
-box "📦 Actualizaciones: $UPDATES"
+
+box "ALMACENAMIENTO"
+
+
+box "SSD Sistema: ${SYSTEM_DISK} %"
+
+box "HDD Datos:   ${DATA_DISK} %"
+
+
+
+separator
+
+
+box "ACTUALIZACIONES: $UPDATES"
 
 
 bottom
