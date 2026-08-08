@@ -37,9 +37,56 @@ echo
 echo "🖥️ Estado del sistema"
 echo
 
-echo "Versión: $(cat "$VERSION_FILE" 2>/dev/null)"
+if [ -f "$VERSION_FILE" ]; then
+    echo "Versión: $(cat "$VERSION_FILE")"
+else
+    echo "Versión: desconocida"
+fi
+
 echo "Kernel: $(uname -r)"
 echo "Uptime: $(uptime -p | sed 's/up //')"
+
+echo
+
+echo "🌐 Red"
+
+IP=$(hostname -I | awk '{print $1}')
+
+if [ -n "$IP" ]; then
+    echo "IP: $IP"
+else
+    echo "IP: no disponible"
+fi
+
+echo
+
+echo "💾 Disco raíz"
+
+DISK=$(df -h / | awk 'NR==2 {print $5}')
+
+if [ -n "$DISK" ]; then
+    echo "Uso: $DISK"
+else
+    echo "Uso: no disponible"
+fi
+
+echo
+
+echo "🐳 Docker"
+
+if command_exists docker; then
+
+    if systemctl is-active --quiet docker; then
+        echo "Estado: activo"
+    else
+        echo "Estado: detenido"
+    fi
+
+else
+
+    echo "Estado: no instalado"
+
+fi
 
 echo
 
