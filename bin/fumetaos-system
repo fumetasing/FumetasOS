@@ -34,7 +34,7 @@ mostrar_status()
 {
 
 echo
-echo "🖥️ Sistema FumetaOS"
+echo "🖥️ Estado del sistema"
 echo
 
 echo "Versión: $(cat "$VERSION_FILE" 2>/dev/null)"
@@ -50,12 +50,22 @@ mostrar_help()
 {
 
 echo
+echo "🖥️ FumetaOS System"
+echo
+
 echo "Uso:"
 echo
 
 echo "fumetaos system version"
-echo "fumetaos system status"
+echo "   Mostrar versión del sistema"
+echo
 
+echo "fumetaos system status"
+echo "   Estado del sistema"
+echo
+
+echo "fumetaos system help"
+echo "   Mostrar ayuda"
 echo
 
 }
@@ -75,8 +85,8 @@ status)
     ;;
 
 
-help)
-
+help|"")
+    
     mostrar_help
     ;;
 
