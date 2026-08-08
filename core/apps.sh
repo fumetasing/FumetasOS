@@ -103,56 +103,20 @@ app_update()
 
 APP_PATH="$1"
 
-if [ -z "$APP_PATH" ]; then
-    return 1
-fi
-
-
 app_load "$APP_PATH" || return 1
-
-
-if [ -z "$APP_COMPOSE" ]; then
-
-    echo "❌ No existe archivo compose para $APP_NAME"
-    return 1
-
-fi
-
 
 echo
 echo "🔄 Actualizando $APP_NAME"
 echo
 
-
 cd "$APP_DATA" || return 1
 
+docker compose -f "$APP_COMPOSE" pull || return 1
 
-docker compose -f "$APP_COMPOSE" pull
+docker compose -f "$APP_COMPOSE" up -d || return 1
 
-if [ $? -ne 0 ]; then
-
-    echo
-    echo "❌ Error descargando imagen"
-    return 1
-
-fi
-
-
-docker compose -f "$APP_COMPOSE" up -d
-
-
-if [ $? -eq 0 ]; then
-
-    echo
-    echo "✅ $APP_NAME actualizado"
-
-else
-
-    echo
-    echo "❌ Error reiniciando $APP_NAME"
-    return 1
-
-fi
+echo
+echo "✅ $APP_NAME actualizado"
 
 }
 
@@ -165,36 +129,38 @@ app_restart()
 
 APP_PATH="$1"
 
-if [ -z "$APP_PATH" ]; then
-    return 1
-fi
-
-
 app_load "$APP_PATH" || return 1
-
 
 echo
 echo "🔄 Reiniciando $APP_NAME"
 echo
 
+cd "$APP_DATA" || return 1
+
+docker compose -f "$APP_COMPOSE" restart || return 1
+
+echo
+echo "✅ $APP_NAME reiniciado"
+
+}
+
+###########################################################
+# Logs aplicación
+###########################################################
+
+app_logs()
+{
+
+APP_PATH="$1"
+
+app_load "$APP_PATH" || return 1
+
+echo
+echo "📜 Logs de $APP_NAME"
+echo
 
 cd "$APP_DATA" || return 1
 
-
-docker compose -f "$APP_COMPOSE" restart
-
-
-if [ $? -eq 0 ]; then
-
-    echo
-    echo "✅ $APP_NAME reiniciado"
-
-else
-
-    echo
-    echo "❌ Error reiniciando $APP_NAME"
-    return 1
-
-fi
+docker compose -f "$APP_COMPOSE" logs --tail=100
 
 }
