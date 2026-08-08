@@ -1,0 +1,89 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# System Manager
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+
+
+mostrar_version()
+{
+
+echo
+echo "🖥️ FumetaOS"
+echo
+
+if [ -f "$VERSION_FILE" ]; then
+    echo "Versión: $(cat "$VERSION_FILE")"
+else
+    echo "Versión: desconocida"
+fi
+
+echo "Kernel: $(uname -r)"
+
+echo "Uptime: $(uptime -p | sed 's/up //')"
+
+echo
+
+}
+
+
+mostrar_status()
+{
+
+echo
+echo "🖥️ Sistema FumetaOS"
+echo
+
+echo "Versión: $(cat "$VERSION_FILE" 2>/dev/null)"
+echo "Kernel: $(uname -r)"
+echo "Uptime: $(uptime -p | sed 's/up //')"
+
+echo
+
+}
+
+
+mostrar_help()
+{
+
+echo
+echo "Uso:"
+echo
+
+echo "fumetaos system version"
+echo "fumetaos system status"
+
+echo
+
+}
+
+
+case "$1" in
+
+version)
+
+    mostrar_version
+    ;;
+
+
+status)
+
+    mostrar_status
+    ;;
+
+
+help)
+
+    mostrar_help
+    ;;
+
+
+*)
+
+    mostrar_help
+    ;;
+
+esac

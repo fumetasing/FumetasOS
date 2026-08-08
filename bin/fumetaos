@@ -74,6 +74,13 @@ app)
     ;;
 
 
+system)
+
+    shift
+    exec "$BIN_DIR/fumetaos-system" "$@"
+    ;;
+
+
 update)
 
     exec sudo "$INSTALL_DIR/update.sh" --update
