@@ -1,52 +1,149 @@
 #!/bin/bash
 
 ###########################################################
-# FumetaOS Dashboard
+# FumetaOS Dashboard v3
 ###########################################################
 
 source /opt/fumetaos/core/common.sh
 source /opt/fumetaos/core/system.sh
+source /opt/fumetaos/core/apps.sh
+
+
+WIDTH=42
+INNER=$((WIDTH-2))
+
+
+line()
+{
+printf '═%.0s' $(seq 1 "$INNER")
+}
+
+
+top()
+{
+echo "╔$(line)╗"
+}
+
+
+bottom()
+{
+echo "╚$(line)╝"
+}
+
+
+separator()
+{
+echo "╠$(line)╣"
+}
+
+
+box()
+{
+
+TEXT="$1"
+
+printf "║ %-38s ║\n" "$TEXT"
+
+}
+
+
+VERSION="desconocida"
+
+[ -f "$VERSION_FILE" ] && VERSION=$(cat "$VERSION_FILE")
+
 
 CPU=$(cpu_temp)
 RAM=$(ram_usage)
-DISCO=$(disk_usage)
+
+SYSTEM_DISK=$(df / | awk 'NR==2 {gsub("%","",$5);print $5}')
+
+DATA_DISK=$(disk_usage)
+
 UPDATES=$(updates_available)
+
 
 if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1
 then
     ESTADO="🟢 PERFECTO"
 else
-    RET=$?
-
-    if [ "$RET" -eq 10 ]; then
-        ESTADO="🟡 AVISOS"
-    else
-        ESTADO="🔴 REVISAR"
-    fi
+    ESTADO="🟡 AVISOS"
 fi
 
-echo
-echo "🖥️ FumetaOS $FUMETAOS_VERSION"
-echo
 
-echo "Estado: $ESTADO"
-echo
-echo "💾 Disco: ${DISCO}%"
-echo "🧠 RAM:   ${RAM}%"
-echo "🌡️ CPU:   ${CPU}°C"
-echo "📦 Actualizaciones: ${UPDATES}"
-echo
+top
 
-echo "Comandos"
-echo "────────"
-echo "health    Estado completo"
-echo "status    Estado rápido"
-echo "doctor    Diagnóstico"
-echo "report    Informe Telegram"
-echo "version   Información"
-echo "config    Configuración"
+box "🖥️ FumetaOS v$VERSION"
 
-echo
-echo "Mac mini Late 2012"
-echo "$(. /etc/os-release && echo "$PRETTY_NAME")"
-echo
+separator
+
+box "🟢 Estado: $ESTADO"
+
+separator
+
+box "📊 Recursos"
+box "🌡️ CPU: ${CPU}°C"
+box "🧠 RAM: ${RAM}%"
+box "💾 Sistema: ${SYSTEM_DISK}%"
+
+separator
+
+box "📦 Aplicaciones"
+
+
+for APP in $(app_list)
+do
+
+app_load "$APP"
+
+
+if app_running
+then
+ICON="🟢"
+else
+ICON="🔴"
+fi
+
+
+box "$ICON $APP_NAME"
+box "   Version: $APP_VERSION"
+box "   Health: $(app_health)"
+
+
+done
+
+
+separator
+
+box "🛠️ Servicios"
+
+
+for SERVICE in docker ssh tailscaled
+do
+
+if systemctl is-active --quiet "$SERVICE"
+then
+box "🟢 $SERVICE"
+else
+box "🔴 $SERVICE"
+fi
+
+done
+
+
+separator
+
+box "💾 Almacenamiento"
+
+box "🟢 SSD Sistema"
+box "   Uso: ${SYSTEM_DISK}%"
+
+box "🟢 HDD Datos"
+box "   Uso: ${DATA_DISK}%"
+
+
+separator
+
+box "📦 Actualizaciones: $UPDATES"
+
+
+bottom
