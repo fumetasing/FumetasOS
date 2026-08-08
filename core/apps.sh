@@ -5,15 +5,7 @@
 # Apps Core
 ###########################################################
 
-###########################################################
-# Cargar núcleo FumetaOS
-###########################################################
-
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-
-###########################################################
-# Lista aplicaciones instaladas
-###########################################################
 
 app_list()
 {
@@ -30,9 +22,6 @@ done
 
 }
 
-###########################################################
-# Buscar aplicación por ID
-###########################################################
 
 app_find()
 {
@@ -55,26 +44,18 @@ return 1
 
 }
 
-###########################################################
-# Cargar configuración aplicación
-###########################################################
 
 app_load()
 {
 
 APP_PATH="$1"
 
-if [ ! -f "$APP_PATH/app.conf" ]; then
-    return 1
-fi
+[ -f "$APP_PATH/app.conf" ] || return 1
 
 source "$APP_PATH/app.conf"
 
 }
 
-###########################################################
-# Comprueba si aplicación está ejecutándose
-###########################################################
 
 app_running()
 {
@@ -83,9 +64,6 @@ docker ps --format '{{.Names}}' | grep -qx "$APP_ID"
 
 }
 
-###########################################################
-# Devuelve versión aplicación
-###########################################################
 
 app_version()
 {
@@ -94,9 +72,6 @@ echo "$APP_VERSION"
 
 }
 
-###########################################################
-# Actualizar aplicación
-###########################################################
 
 app_update()
 {
@@ -120,9 +95,6 @@ echo "✅ $APP_NAME actualizado"
 
 }
 
-###########################################################
-# Reiniciar aplicación
-###########################################################
 
 app_restart()
 {
@@ -144,9 +116,6 @@ echo "✅ $APP_NAME reiniciado"
 
 }
 
-###########################################################
-# Logs aplicación
-###########################################################
 
 app_logs()
 {
@@ -162,5 +131,29 @@ echo
 cd "$APP_DATA" || return 1
 
 docker compose -f "$APP_COMPOSE" logs --tail=100
+
+}
+
+
+app_status()
+{
+
+APP_PATH="$1"
+
+app_load "$APP_PATH" || return 1
+
+echo
+echo "📦 $APP_NAME"
+echo
+
+if app_running
+then
+    echo "Estado: 🟢 Ejecutando"
+else
+    echo "Estado: 🔴 Detenido"
+fi
+
+echo "Versión: $APP_VERSION"
+echo "Imagen: $APP_IMAGE"
 
 }
