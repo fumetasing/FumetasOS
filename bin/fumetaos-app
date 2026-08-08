@@ -16,6 +16,7 @@ echo
 echo "📦 Aplicaciones"
 echo
 
+
 FOUND=0
 
 for APP in $(app_list)
@@ -23,7 +24,22 @@ do
 
     app_load "$APP"
 
-    printf "🟢 %-15s (%s)\n" "$APP_NAME" "$APP_TYPE"
+
+    echo "🟢 $APP_NAME"
+    echo "   Tipo: $APP_TYPE"
+    echo "   Versión: $APP_VERSION"
+
+
+    if app_running
+    then
+        echo "   Estado: 🟢 Ejecutando"
+    else
+        echo "   Estado: 🔴 Detenido"
+    fi
+
+
+    echo
+
 
     FOUND=1
 
