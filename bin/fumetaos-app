@@ -2,11 +2,13 @@
 
 ###########################################################
 # FumetaOS
-# Apps
+# Apps Manager v2
 ###########################################################
 
 source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/apps.sh"
+source "$CORE_DIR/casaos.sh"
+source "$CORE_DIR/generator.sh"
 
 
 ayuda_app()
@@ -15,19 +17,70 @@ ayuda_app()
 echo
 echo "Uso:"
 echo
+
 echo "fumetaos app list"
-echo "fumetaos app install <app>"
-echo "fumetaos app update <app>"
-echo "fumetaos app restart <app>"
-echo "fumetaos app logs <app>"
-echo "fumetaos app status <app>"
-echo "fumetaos app check <app>"
-echo "fumetaos app version <app>"
-echo "fumetaos app info <app>"
-echo "fumetaos app exec <app> <comando>"
-echo "fumetaos app remove <app>"
-echo "fumetaos app help"
+echo "   Listar aplicaciones"
+
 echo
+
+echo "fumetaos app info <app>"
+echo "   Información completa"
+
+echo
+
+echo "fumetaos app generate <app>"
+echo "   Generar recursos de aplicación"
+
+echo
+
+echo "fumetaos app metadata <app>"
+echo "   Generar metadata CasaOS"
+
+echo
+
+echo "fumetaos app install <app>"
+echo "   Instalar aplicación"
+
+echo
+
+echo "fumetaos app update <app>"
+echo "   Actualizar aplicación"
+
+echo
+
+echo "fumetaos app restart <app>"
+echo "   Reiniciar aplicación"
+
+echo
+
+echo "fumetaos app logs <app>"
+echo "   Ver logs"
+
+echo
+
+echo "fumetaos app remove <app>"
+echo "   Eliminar aplicación"
+
+echo
+
+}
+
+
+resolver_app()
+{
+
+APP_PATH=$(app_find "$1")
+
+
+if [ -z "$APP_PATH" ]; then
+
+    echo "❌ Aplicación no encontrada: $1" >&2
+    return 1
+
+fi
+
+
+echo "$APP_PATH"
 
 }
 
@@ -40,70 +93,121 @@ echo "📦 Aplicaciones"
 echo
 
 
-FOUND=0
+TOTAL=0
+
 
 for APP in $(app_list)
 do
 
     app_load "$APP"
 
+    TOTAL=$((TOTAL+1))
+
 
     echo "🟢 $APP_NAME"
-    echo "   Tipo: $APP_TYPE"
+
+    [ -n "$APP_DESCRIPTION" ] && echo "   $APP_DESCRIPTION"
+
+    [ -n "$APP_CATEGORY" ] && echo "   Categoría: $APP_CATEGORY"
+
     echo "   Versión: $APP_VERSION"
 
-
-    if app_running
-    then
+    if app_running; then
         echo "   Estado: 🟢 Ejecutando"
     else
         echo "   Estado: 🔴 Detenido"
     fi
 
-
     echo
-
-
-    FOUND=1
 
 done
 
 
-if [ "$FOUND" -eq 0 ]; then
-
-    echo "No hay aplicaciones registradas."
-
-fi
+echo "Total: $TOTAL"
 
 echo
 
 }
 
 
-resolver_app()
+info_app()
 {
 
-APP_ID="$1"
+APP_PATH=$(resolver_app "$1") || return 1
 
-if [ -z "$APP_ID" ]; then
+app_load "$APP_PATH"
 
-    echo "❌ Falta indicar aplicación" >&2
-    return 1
 
+echo
+echo "📦 $APP_NAME"
+echo
+
+echo "Descripción: $APP_DESCRIPTION"
+echo "Categoría: $APP_CATEGORY"
+echo "Autor: $APP_AUTHOR"
+
+echo
+
+echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo "Contenedor: $(app_container)"
+
+echo
+
+echo "Puerto: $APP_PORT"
+echo "URL: $APP_URL"
+
+echo
+
+echo "Compose: $APP_COMPOSE"
+echo "Datos: $APP_DATA"
+
+echo
+
+
+if app_running; then
+    echo "Estado: 🟢 Ejecutando"
+else
+    echo "Estado: 🔴 Detenido"
 fi
 
 
-APP_PATH=$(app_find "$APP_ID")
+echo
+
+}
 
 
-if [ -z "$APP_PATH" ]; then
+generar_app()
+{
 
-    echo "❌ Aplicación no encontrada: $APP_ID" >&2
-    return 1
+APP_PATH=$(resolver_app "$1") || return 1
 
-fi
 
-echo "$APP_PATH"
+echo
+echo "📦 Generando aplicación"
+echo
+
+
+generate_app_structure "$APP_PATH"
+
+generate_compose "$APP_PATH"
+
+casaos_generate "$APP_PATH"
+
+
+echo
+echo "✅ Generación completada"
+
+echo
+
+}
+
+
+metadata_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+casaos_generate "$APP_PATH"
 
 }
 
@@ -148,127 +252,10 @@ app_logs "$APP_PATH"
 }
 
 
-estado_app()
-{
-
-APP_PATH=$(resolver_app "$1") || return 1
-
-app_status "$APP_PATH"
-
-}
-
-
-check_app()
-{
-
-APP_PATH=$(resolver_app "$1") || return 1
-
-app_check "$APP_PATH"
-
-}
-
-
-version_app()
-{
-
-APP_PATH=$(resolver_app "$1") || return 1
-
-app_load "$APP_PATH" || return 1
-
-
-echo
-echo "📦 $APP_NAME"
-echo
-echo "Versión: $APP_VERSION"
-echo "Imagen: $APP_IMAGE:$APP_TAG"
-echo
-
-}
-
-
-info_app()
-{
-
-APP_PATH=$(resolver_app "$1") || return 1
-
-app_load "$APP_PATH" || return 1
-
-
-echo
-echo "📦 Información de $APP_NAME"
-echo
-
-echo "ID: $APP_ID"
-echo "Nombre: $APP_NAME"
-echo "Descripción: $APP_DESCRIPTION"
-echo "Tipo: $APP_TYPE"
-echo "Versión: $APP_VERSION"
-echo "Imagen: $APP_IMAGE:$APP_TAG"
-echo "Contenedor: $(app_container)"
-echo "Puerto: $APP_PORT"
-echo "URL: $APP_URL"
-echo "Compose: $APP_COMPOSE"
-echo "Datos: $APP_DATA"
-
-echo
-
-if app_running
-then
-    echo "Estado: 🟢 Ejecutando"
-else
-    echo "Estado: 🔴 Detenido"
-fi
-
-echo
-
-}
-
-
-exec_app()
-{
-
-APP_PATH=$(resolver_app "$1") || return 1
-
-app_load "$APP_PATH" || return 1
-
-shift
-
-
-if [ -z "$1" ]; then
-
-    echo "❌ Falta comando para ejecutar"
-    return 1
-
-fi
-
-
-docker exec -it "$(app_container)" "$@"
-
-}
-
-
 eliminar_app()
 {
 
 APP_PATH=$(resolver_app "$1") || return 1
-
-app_load "$APP_PATH" || return 1
-
-
-echo
-echo "⚠️ Vas a eliminar $APP_NAME"
-echo "¿Continuar? (y/N)"
-
-read -r CONFIRM
-
-
-if [ "$CONFIRM" != "y" ]; then
-
-    echo "❌ Cancelado"
-    return 1
-
-fi
-
 
 app_remove "$APP_PATH"
 
@@ -277,81 +264,65 @@ app_remove "$APP_PATH"
 
 case "$1" in
 
+
 list)
 
-    listar_apps
-    ;;
-
-
-install)
-
-    instalar_app "$2"
-    ;;
-
-
-update)
-
-    actualizar_app "$2"
-    ;;
-
-
-restart)
-
-    reiniciar_app "$2"
-    ;;
-
-
-logs)
-
-    logs_app "$2"
-    ;;
-
-
-status)
-
-    estado_app "$2"
-    ;;
-
-
-check)
-
-    check_app "$2"
-    ;;
-
-
-version)
-
-    version_app "$2"
-    ;;
+listar_apps
+;;
 
 
 info)
 
-    info_app "$2"
-    ;;
+info_app "$2"
+;;
 
 
-exec)
+generate)
 
-    exec_app "$2" "${@:3}"
-    ;;
+generar_app "$2"
+;;
+
+
+metadata)
+
+metadata_app "$2"
+;;
+
+
+install)
+
+instalar_app "$2"
+;;
+
+
+update)
+
+actualizar_app "$2"
+;;
+
+
+restart)
+
+reiniciar_app "$2"
+;;
+
+
+logs)
+
+logs_app "$2"
+;;
 
 
 remove)
 
-    eliminar_app "$2"
-    ;;
+eliminar_app "$2"
+;;
 
 
-help)
+help|*)
 
-    ayuda_app
-    ;;
+ayuda_app
+;;
 
-
-*)
-
-    ayuda_app
-    ;;
 
 esac

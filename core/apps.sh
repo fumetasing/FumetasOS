@@ -2,7 +2,7 @@
 
 ###########################################################
 # FumetaOS
-# Apps Core
+# Apps Core v2
 ###########################################################
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -72,6 +72,54 @@ else
     echo "$APP_ID"
 
 fi
+
+}
+
+
+app_description()
+{
+
+echo "$APP_DESCRIPTION"
+
+}
+
+
+app_category()
+{
+
+echo "$APP_CATEGORY"
+
+}
+
+
+app_icon()
+{
+
+echo "$APP_ICON"
+
+}
+
+
+app_url()
+{
+
+echo "$APP_URL"
+
+}
+
+
+app_webui()
+{
+
+echo "$APP_WEBUI"
+
+}
+
+
+app_author()
+{
+
+echo "$APP_AUTHOR"
 
 }
 
@@ -242,6 +290,11 @@ echo "📦 $APP_NAME"
 echo
 
 
+[ -n "$APP_DESCRIPTION" ] && echo "Descripción: $APP_DESCRIPTION"
+
+[ -n "$APP_CATEGORY" ] && echo "Categoría: $APP_CATEGORY"
+
+
 if app_running
 then
 
@@ -257,6 +310,31 @@ fi
 echo "Versión: $APP_VERSION"
 echo "Imagen: $APP_IMAGE:$APP_TAG"
 echo "Contenedor: $(app_container)"
+
+[ -n "$APP_PORT" ] && echo "Puerto: $APP_PORT"
+
+[ -n "$APP_URL" ] && echo "URL: $APP_URL"
+
+
+HEALTH=$(app_health)
+
+
+if [ "$HEALTH" = "healthy" ]; then
+
+    echo "Health: 🟢 healthy"
+
+elif [ "$HEALTH" = "unhealthy" ]; then
+
+    echo "Health: 🔴 unhealthy"
+
+else
+
+    echo "Health: 🟡 Sin healthcheck"
+
+fi
+
+
+echo
 
 }
 
@@ -319,9 +397,6 @@ if app_running
 then
 
     echo "Estado: 🟢 Ejecutando"
-
-    echo
-    echo "✅ Aplicación correcta"
 
 else
 
