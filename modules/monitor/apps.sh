@@ -25,8 +25,21 @@ do
     then
 
         echo "🟢 $APP_NAME"
+
+        if [ -n "$APP_DESCRIPTION" ]; then
+            echo "   $APP_DESCRIPTION"
+        fi
+
         echo "   Estado: 🟢 Ejecutando"
         echo "   Versión: $APP_VERSION"
+
+        if [ -n "$APP_URL" ]; then
+            echo "   URL: $APP_URL"
+        fi
+
+        if [ -n "$APP_PORT" ]; then
+            echo "   Puerto: $APP_PORT"
+        fi
 
 
         HEALTH=$(app_health)
@@ -41,12 +54,21 @@ do
             echo "   Health: 🔴 unhealthy"
             ERROR=20
 
+        else
+
+            echo "   Health: 🟡 Sin healthcheck"
+
         fi
 
 
     else
 
         echo "🔴 $APP_NAME"
+
+        if [ -n "$APP_DESCRIPTION" ]; then
+            echo "   $APP_DESCRIPTION"
+        fi
+
         echo "   Estado: 🔴 Detenido"
 
         ERROR=20
