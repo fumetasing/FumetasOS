@@ -12,72 +12,12 @@
 source "$(dirname "$0")/../core/common.sh"
 
 
-mostrar_help()
-{
-
-echo
-echo "🖥️ FumetaOS"
-echo
-
-echo "Uso:"
-echo
-
-echo "fumetaos health"
-echo "   Estado completo del sistema"
-echo
-
-echo "fumetaos status"
-echo "   Estado resumido"
-echo
-
-echo "fumetaos report"
-echo "   Enviar informe Telegram"
-echo
-
-echo "fumetaos doctor"
-echo "   Diagnóstico del sistema"
-echo
-
-echo "fumetaos version"
-echo "   Mostrar versión"
-echo
-
-echo "fumetaos app <comando>"
-echo "   Gestión de aplicaciones"
-echo
-
-echo "fumetaos system <comando>"
-echo "   Gestión del sistema"
-echo
-
-echo "fumetaos backup"
-echo "   Gestión de copias"
-echo
-
-echo "fumetaos history"
-echo "   Historial del sistema"
-echo
-
-echo "fumetaos update"
-echo "   Actualizar FumetaOS"
-echo
-
-echo "fumetaos config"
-echo "   Editar configuración"
-echo
-
-echo "fumetaos help"
-echo "   Mostrar ayuda"
-echo
-
-}
-
-
 ###########################################################
 # Ejecutar comandos
 ###########################################################
 
 case "$1" in
+
 
 health)
 
@@ -115,20 +55,6 @@ version)
     ;;
 
 
-backup)
-
-    shift
-    exec "$BIN_DIR/fumetaos-backup" "$@"
-    ;;
-
-
-history)
-
-    shift
-    exec "$BIN_DIR/fumetaos-history" "$@"
-    ;;
-
-
 app)
 
     shift
@@ -140,6 +66,20 @@ system)
 
     shift
     exec "$BIN_DIR/fumetaos-system" "$@"
+    ;;
+
+
+backup)
+
+    shift
+    exec "$BIN_DIR/fumetaos-backup" "$@"
+    ;;
+
+
+history)
+
+    shift
+    exec "$BIN_DIR/fumetaos-history" "$@"
     ;;
 
 
@@ -157,13 +97,20 @@ config)
 
 help)
 
-    mostrar_help
+    exec "$BIN_DIR/fumetaos-help"
+    ;;
+
+
+"")
+
+    exec "$BIN_DIR/fumetaos-dashboard"
     ;;
 
 
 *)
 
-    mostrar_help
+    exec "$BIN_DIR/fumetaos-dashboard"
     ;;
+
 
 esac
