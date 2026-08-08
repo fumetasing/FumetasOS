@@ -109,6 +109,23 @@ app_status "$APP_PATH"
 }
 
 
+version_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_load "$APP_PATH" || return 1
+
+echo
+echo "📦 $APP_NAME"
+echo
+echo "Versión: $APP_VERSION"
+echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo
+
+}
+
+
 case "$1" in
 
 list)
@@ -141,6 +158,12 @@ status)
     ;;
 
 
+version)
+
+    version_app "$2"
+    ;;
+
+
 *)
 
     echo
@@ -151,6 +174,7 @@ status)
     echo "fumetaos app restart <app>"
     echo "fumetaos app logs <app>"
     echo "fumetaos app status <app>"
+    echo "fumetaos app version <app>"
     echo
 
     ;;
