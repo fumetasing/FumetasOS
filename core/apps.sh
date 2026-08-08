@@ -7,6 +7,7 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+
 app_list()
 {
 
@@ -154,6 +155,38 @@ else
 fi
 
 echo "Versión: $APP_VERSION"
-echo "Imagen: $APP_IMAGE"
+echo "Imagen: $APP_IMAGE:$APP_TAG"
+
+}
+
+
+app_remove()
+{
+
+APP_PATH="$1"
+
+app_load "$APP_PATH" || return 1
+
+echo
+echo "🗑️ Eliminando $APP_NAME"
+echo
+
+cd "$APP_DATA" || return 1
+
+docker compose -f "$APP_COMPOSE" down
+
+if [ $? -eq 0 ]; then
+
+    echo
+    echo "✅ $APP_NAME eliminado"
+
+else
+
+    echo
+    echo "❌ Error eliminando $APP_NAME"
+
+    return 1
+
+fi
 
 }

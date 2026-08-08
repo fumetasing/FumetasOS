@@ -48,7 +48,7 @@ APP_ID="$1"
 
 if [ -z "$APP_ID" ]; then
 
-    echo "❌ Falta indicar aplicación"
+    echo "❌ Falta indicar aplicación" >&2
     return 1
 
 fi
@@ -59,7 +59,7 @@ APP_PATH=$(app_find "$APP_ID")
 
 if [ -z "$APP_PATH" ]; then
 
-    echo "❌ Aplicación no encontrada: $APP_ID"
+    echo "❌ Aplicación no encontrada: $APP_ID" >&2
     return 1
 
 fi
@@ -126,6 +126,16 @@ echo
 }
 
 
+eliminar_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_remove "$APP_PATH"
+
+}
+
+
 case "$1" in
 
 list)
@@ -164,6 +174,12 @@ version)
     ;;
 
 
+remove)
+
+    eliminar_app "$2"
+    ;;
+
+
 *)
 
     echo
@@ -175,6 +191,7 @@ version)
     echo "fumetaos app logs <app>"
     echo "fumetaos app status <app>"
     echo "fumetaos app version <app>"
+    echo "fumetaos app remove <app>"
     echo
 
     ;;
