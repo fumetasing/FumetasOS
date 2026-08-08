@@ -82,6 +82,15 @@ APP_PATH="$1"
 app_load "$APP_PATH" || return 1
 
 
+if app_running; then
+
+    echo
+    echo "⚠️ $APP_NAME ya está ejecutándose"
+    return 1
+
+fi
+
+
 echo
 echo "📦 Instalando $APP_NAME"
 echo
