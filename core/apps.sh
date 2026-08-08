@@ -74,6 +74,60 @@ echo "$APP_VERSION"
 }
 
 
+app_install()
+{
+
+APP_PATH="$1"
+
+app_load "$APP_PATH" || return 1
+
+
+echo
+echo "📦 Instalando $APP_NAME"
+echo
+
+
+if [ -z "$APP_COMPOSE" ]; then
+
+    echo "❌ No existe archivo compose para $APP_NAME"
+    return 1
+
+fi
+
+
+if [ ! -f "$APP_COMPOSE" ]; then
+
+    echo "❌ No existe compose: $APP_COMPOSE"
+    return 1
+
+fi
+
+
+mkdir -p "$APP_DATA"
+
+
+cd "$APP_DATA" || return 1
+
+
+docker compose -f "$APP_COMPOSE" up -d
+
+
+if [ $? -eq 0 ]; then
+
+    echo
+    echo "✅ $APP_NAME instalado"
+
+else
+
+    echo
+    echo "❌ Error instalando $APP_NAME"
+    return 1
+
+fi
+
+}
+
+
 app_update()
 {
 

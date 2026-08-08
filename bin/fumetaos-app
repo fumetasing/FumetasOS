@@ -69,6 +69,16 @@ echo "$APP_PATH"
 }
 
 
+instalar_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_install "$APP_PATH"
+
+}
+
+
 actualizar_app()
 {
 
@@ -144,6 +154,12 @@ list)
     ;;
 
 
+install)
+
+    instalar_app "$2"
+    ;;
+
+
 update)
 
     actualizar_app "$2"
@@ -186,6 +202,7 @@ remove)
     echo "Uso:"
     echo
     echo "fumetaos app list"
+    echo "fumetaos app install <app>"
     echo "fumetaos app update <app>"
     echo "fumetaos app restart <app>"
     echo "fumetaos app logs <app>"
