@@ -49,8 +49,6 @@ RET=$?
 echo
 echo "📦 Actualizaciones"
 /opt/fumetaos/modules/monitor/updates.sh
-RET=$?
-[ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
 echo
 
