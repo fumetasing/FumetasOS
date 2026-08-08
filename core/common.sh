@@ -43,10 +43,61 @@ VERSION_FILE="$FUMETAOS_HOME/VERSION"
 CONFIG_FILE="$CONFIG_DIR/fumetaos.conf"
 
 ###########################################################
+# Cargar configuración
+###########################################################
+
+if [ -f "$CONFIG_FILE" ]; then
+
+    source "$CONFIG_FILE"
+
+fi
+
+###########################################################
 # Utilidades
 ###########################################################
 
 command_exists()
 {
+
     command -v "$1" >/dev/null 2>&1
+
+}
+
+
+disk_name()
+{
+
+DEVICE="$1"
+
+
+if [ "$DEVICE" = "$SSD_DEVICE" ]; then
+
+    echo "$SSD_NAME"
+
+elif [ "$DEVICE" = "$HDD_DEVICE" ]; then
+
+    echo "$HDD_NAME"
+
+else
+
+    echo "$DEVICE"
+
+fi
+
+}
+
+
+smartctl_cmd()
+{
+
+if [ "$(id -u)" -eq 0 ]; then
+
+    smartctl "$@"
+
+else
+
+    sudo smartctl "$@"
+
+fi
+
 }
