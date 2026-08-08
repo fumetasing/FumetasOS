@@ -46,6 +46,40 @@ echo
 }
 
 
+mostrar_update()
+{
+
+echo
+echo "🔄 FumetaOS Update"
+echo
+
+if [ -f "$VERSION_FILE" ]; then
+
+    echo "Versión instalada: $(cat "$VERSION_FILE")"
+
+else
+
+    echo "Versión instalada: desconocida"
+
+fi
+
+echo
+echo "Sistema de actualización disponible:"
+echo
+echo "   fumetaos update"
+echo
+
+echo "Este comando realiza:"
+echo "   💾 Backup previo"
+echo "   📦 Instalación del paquete"
+echo "   ⚙️ Actualización de servicios"
+echo "   🩺 Comprobación del sistema"
+
+echo
+
+}
+
+
 mostrar_help()
 {
 
@@ -62,6 +96,10 @@ echo
 
 echo "fumetaos system status"
 echo "   Estado del sistema"
+echo
+
+echo "fumetaos system update"
+echo "   Información de actualización"
 echo
 
 echo "fumetaos system help"
@@ -85,8 +123,14 @@ status)
     ;;
 
 
+update)
+
+    mostrar_update
+    ;;
+
+
 help|"")
-    
+
     mostrar_help
     ;;
 
