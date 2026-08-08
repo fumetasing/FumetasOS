@@ -24,6 +24,7 @@ echo "fumetaos app status <app>"
 echo "fumetaos app check <app>"
 echo "fumetaos app version <app>"
 echo "fumetaos app info <app>"
+echo "fumetaos app exec <app> <comando>"
 echo "fumetaos app remove <app>"
 echo "fumetaos app help"
 echo
@@ -174,6 +175,7 @@ APP_PATH=$(resolver_app "$1") || return 1
 
 app_load "$APP_PATH" || return 1
 
+
 echo
 echo "📦 $APP_NAME"
 echo
@@ -198,9 +200,13 @@ echo
 
 echo "ID: $APP_ID"
 echo "Nombre: $APP_NAME"
+echo "Descripción: $APP_DESCRIPTION"
 echo "Tipo: $APP_TYPE"
 echo "Versión: $APP_VERSION"
 echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo "Contenedor: $(app_container)"
+echo "Puerto: $APP_PORT"
+echo "URL: $APP_URL"
 echo "Compose: $APP_COMPOSE"
 echo "Datos: $APP_DATA"
 
@@ -214,6 +220,29 @@ else
 fi
 
 echo
+
+}
+
+
+exec_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_load "$APP_PATH" || return 1
+
+shift
+
+
+if [ -z "$1" ]; then
+
+    echo "❌ Falta comando para ejecutar"
+    return 1
+
+fi
+
+
+docker exec -it "$(app_container)" "$@"
 
 }
 
@@ -299,6 +328,12 @@ version)
 info)
 
     info_app "$2"
+    ;;
+
+
+exec)
+
+    exec_app "$2" "${@:3}"
     ;;
 
 

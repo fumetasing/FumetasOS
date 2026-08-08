@@ -35,8 +35,10 @@ do
     source "$APP/app.conf"
 
     if [ "$APP_ID" = "$SEARCH_ID" ]; then
+
         echo "$APP"
         return 0
+
     fi
 
 done
@@ -58,10 +60,38 @@ source "$APP_PATH/app.conf"
 }
 
 
+app_container()
+{
+
+if [ -n "$APP_CONTAINER" ]; then
+
+    echo "$APP_CONTAINER"
+
+else
+
+    echo "$APP_ID"
+
+fi
+
+}
+
+
 app_running()
 {
 
-docker ps --format '{{.Names}}' | grep -qx "$APP_ID"
+CONTAINER=$(app_container)
+
+docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"
+
+}
+
+
+app_health()
+{
+
+CONTAINER=$(app_container)
+
+docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null
 
 }
 
@@ -206,19 +236,27 @@ APP_PATH="$1"
 
 app_load "$APP_PATH" || return 1
 
+
 echo
 echo "📦 $APP_NAME"
 echo
 
+
 if app_running
 then
+
     echo "Estado: 🟢 Ejecutando"
+
 else
+
     echo "Estado: 🔴 Detenido"
+
 fi
+
 
 echo "Versión: $APP_VERSION"
 echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo "Contenedor: $(app_container)"
 
 }
 
@@ -248,9 +286,10 @@ fi
 
 
 echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo "Contenedor: $(app_container)"
 
 
-HEALTH=$(docker inspect "$APP_ID" --format '{{.State.Health.Status}}' 2>/dev/null)
+HEALTH=$(app_health)
 
 
 if [ "$HEALTH" = "healthy" ]; then
@@ -269,7 +308,7 @@ else
 
     else
 
-        echo "Health: 🔴 Contenedor detenido"
+        echo "Health: 🔴 No disponible"
 
     fi
 
@@ -279,14 +318,14 @@ fi
 if app_running
 then
 
-    echo "Contenedor: 🟢 Ejecutando"
+    echo "Estado: 🟢 Ejecutando"
 
     echo
     echo "✅ Aplicación correcta"
 
 else
 
-    echo "Contenedor: 🔴 Detenido"
+    echo "Estado: 🔴 Detenida"
 
 fi
 
