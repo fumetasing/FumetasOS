@@ -11,6 +11,10 @@ echo
 echo "🖥️ FumetaOS"
 echo
 
+echo "🖥️ Sistema"
+/opt/fumetaos/modules/monitor/system.sh
+
+echo
 echo "🛠️ Servicios"
 /opt/fumetaos/modules/monitor/services.sh
 RET=$?
