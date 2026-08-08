@@ -80,6 +80,28 @@ echo
 }
 
 
+mostrar_changelog()
+{
+
+echo
+echo "📜 FumetaOS Changelog"
+echo
+
+if [ -f "$FUMETAOS_HOME/CHANGELOG.md" ]; then
+
+    cat "$FUMETAOS_HOME/CHANGELOG.md"
+
+else
+
+    echo "❌ No existe CHANGELOG.md"
+
+fi
+
+echo
+
+}
+
+
 mostrar_help()
 {
 
@@ -100,6 +122,10 @@ echo
 
 echo "fumetaos system update"
 echo "   Información de actualización"
+echo
+
+echo "fumetaos system changelog"
+echo "   Mostrar historial de cambios"
 echo
 
 echo "fumetaos system help"
@@ -126,6 +152,12 @@ status)
 update)
 
     mostrar_update
+    ;;
+
+
+changelog)
+
+    mostrar_changelog
     ;;
 
 
