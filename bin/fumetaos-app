@@ -119,6 +119,16 @@ app_status "$APP_PATH"
 }
 
 
+check_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_check "$APP_PATH"
+
+}
+
+
 version_app()
 {
 
@@ -236,6 +246,12 @@ status)
     ;;
 
 
+check)
+
+    check_app "$2"
+    ;;
+
+
 version)
 
     version_app "$2"
@@ -265,6 +281,7 @@ remove)
     echo "fumetaos app restart <app>"
     echo "fumetaos app logs <app>"
     echo "fumetaos app status <app>"
+    echo "fumetaos app check <app>"
     echo "fumetaos app version <app>"
     echo "fumetaos app info <app>"
     echo "fumetaos app remove <app>"

@@ -223,6 +223,78 @@ echo "Imagen: $APP_IMAGE:$APP_TAG"
 }
 
 
+app_check()
+{
+
+APP_PATH="$1"
+
+app_load "$APP_PATH" || return 1
+
+
+echo
+echo "🔎 Comprobación $APP_NAME"
+echo
+
+
+if [ -f "$APP_COMPOSE" ]; then
+
+    echo "Compose: 🟢 Encontrado"
+
+else
+
+    echo "Compose: 🔴 No encontrado"
+
+fi
+
+
+echo "Imagen: $APP_IMAGE:$APP_TAG"
+
+
+HEALTH=$(docker inspect "$APP_ID" --format '{{.State.Health.Status}}' 2>/dev/null)
+
+
+if [ "$HEALTH" = "healthy" ]; then
+
+    echo "Health: 🟢 healthy"
+
+elif [ "$HEALTH" = "unhealthy" ]; then
+
+    echo "Health: 🔴 unhealthy"
+
+else
+
+    if app_running; then
+
+        echo "Health: 🟡 Sin healthcheck"
+
+    else
+
+        echo "Health: 🔴 Contenedor detenido"
+
+    fi
+
+fi
+
+
+if app_running
+then
+
+    echo "Contenedor: 🟢 Ejecutando"
+
+    echo
+    echo "✅ Aplicación correcta"
+
+else
+
+    echo "Contenedor: 🔴 Detenido"
+
+fi
+
+echo
+
+}
+
+
 app_remove()
 {
 
