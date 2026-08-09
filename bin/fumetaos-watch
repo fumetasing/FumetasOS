@@ -5,50 +5,82 @@
 # Watch
 ###########################################################
 
-LOG="/tmp/fumetaos-watch.alert"
+source "$(dirname "$0")/../core/common.sh"
+source "$CORE_DIR/watch.sh"
 
-MENSAJE="🚨 FumetaOS
 
-"
+mostrar_help()
+{
 
-ERROR=0
+echo
 
-for MODULO in \
-    /opt/fumetaos/modules/monitor/services.sh \
-    /opt/fumetaos/modules/monitor/smart.sh \
-    /opt/fumetaos/modules/monitor/temperature.sh \
-    /opt/fumetaos/modules/monitor/disks.sh \
-    /opt/fumetaos/modules/monitor/memory.sh \
-    /opt/fumetaos/modules/monitor/updates.sh
-do
+echo "👁️ FumetaOS Watch"
 
-    SALIDA=$("$MODULO" --watch)
-    RET=$?
+echo
 
-    if [ "$RET" -eq 20 ]; then
+echo "Uso:"
+echo
 
-        MENSAJE+="• $SALIDA\n"
+echo "fumetaos watch run"
+echo "   Ejecutar comprobación del sistema"
 
-        ERROR=20
+echo
 
-    fi
+echo "fumetaos watch help"
+echo "   Mostrar ayuda"
 
-done
+echo
 
-if [ "$ERROR" -eq 20 ]; then
+}
 
-    if [ ! -f "$LOG" ]; then
 
-        printf "%b" "$MENSAJE" | telegram-notify
 
-        touch "$LOG"
+watch_execute()
+{
 
-    fi
+echo
 
-else
+echo "👁️ FumetaOS Watch"
 
-    rm -f "$LOG"
+echo
 
-fi
+echo "🔎 Comprobando sistema..."
 
-exit "$ERROR"
+echo
+
+
+watch_run
+
+
+echo
+
+echo "✅ Comprobación completada"
+
+echo
+
+}
+
+
+
+case "$1" in
+
+
+run)
+
+    watch_execute
+    ;;
+
+
+help|"")
+
+    mostrar_help
+    ;;
+
+
+*)
+
+    mostrar_help
+    ;;
+
+
+esac

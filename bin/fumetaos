@@ -2,19 +2,13 @@
 
 ###########################################################
 # FumetaOS
-# Comando principal
+# Main CLI
 ###########################################################
 
-###########################################################
-# Cargar núcleo FumetaOS
-###########################################################
+BIN_DIR="$(dirname "$0")"
 
-source "$(dirname "$0")/../core/common.sh"
+source "$BIN_DIR/../core/common.sh"
 
-
-###########################################################
-# Ejecutar comandos
-###########################################################
 
 case "$1" in
 
@@ -28,12 +22,6 @@ health)
 status)
 
     exec "$BIN_DIR/fumetaos-status"
-    ;;
-
-
-watch)
-
-    exec "$BIN_DIR/fumetaos-watch"
     ;;
 
 
@@ -69,47 +57,54 @@ system)
     ;;
 
 
-backup)
+watch)
 
     shift
-    exec "$BIN_DIR/fumetaos-backup" "$@"
+    exec "$BIN_DIR/fumetaos-watch" "$@"
+    ;;
+
+
+backup)
+
+    exec "$BIN_DIR/fumetaos-backup"
     ;;
 
 
 history)
 
-    shift
-    exec "$BIN_DIR/fumetaos-history" "$@"
+    exec "$BIN_DIR/fumetaos-history"
     ;;
 
 
 update)
 
-    exec sudo "$INSTALL_DIR/update.sh" --update
+    exec "$BIN_DIR/fumetaos-update"
     ;;
 
 
 config)
 
-    sudo nano "$CONFIG_FILE"
+    exec "$BIN_DIR/fumetaos-config"
     ;;
 
 
-help)
+help|"")
 
     exec "$BIN_DIR/fumetaos-help"
     ;;
 
 
-"")
-
-    exec "$BIN_DIR/fumetaos-dashboard"
-    ;;
-
-
 *)
 
-    exec "$BIN_DIR/fumetaos-dashboard"
+    echo
+    echo "❌ Comando desconocido: $1"
+    echo
+    echo "Usa:"
+    echo
+    echo "fumetaos help"
+    echo
+
+    exit 1
     ;;
 
 
