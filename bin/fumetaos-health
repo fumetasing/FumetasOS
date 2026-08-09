@@ -25,11 +25,20 @@ echo
 echo "🖥️ Sistema"
 /opt/fumetaos/modules/monitor/system.sh
 
+
 echo
 echo "🛠️ Servicios"
 /opt/fumetaos/modules/monitor/services.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+
+echo
+echo "⏱️ Timers FumetaOS"
+/opt/fumetaos/modules/monitor/timers.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
 
 echo
 echo "💚 SMART"
@@ -37,11 +46,13 @@ echo "💚 SMART"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
 echo "🌡️ Temperatura"
 /opt/fumetaos/modules/monitor/temperature.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
 
 echo
 echo "💾 Discos"
@@ -49,11 +60,13 @@ echo "💾 Discos"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
 echo "🧠 Memoria"
 /opt/fumetaos/modules/monitor/memory.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
 
 echo
 echo "📦 Aplicaciones"
@@ -61,9 +74,11 @@ echo "📦 Aplicaciones"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
 echo "📦 Actualizaciones"
 /opt/fumetaos/modules/monitor/updates.sh
+
 
 echo
 
