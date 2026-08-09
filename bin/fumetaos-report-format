@@ -1,0 +1,117 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Daily Report Formatter
+###########################################################
+
+SEPARATOR="━━━━━━━━━━━━━━━━"
+
+
+echo "🖥️ FumetaOS DAILY REPORT"
+echo "$SEPARATOR"
+
+
+while IFS= read -r LINE
+do
+
+    case "$LINE" in
+
+
+    "🖥️ FumetaOS v"*)
+
+        echo "$LINE"
+        echo
+
+        ;;
+
+
+    "🖥️ Sistema")
+
+        echo "$LINE"
+        echo
+
+        ;;
+
+
+    "🛠️ Servicios")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "💚 SMART")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "💾 Discos")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "🌡️ Temperatura")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "🧠 Memoria")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "📦 Aplicaciones")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "📦 Actualizaciones")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "🟢 Estado general:"*)
+
+        echo "$SEPARATOR"
+        echo
+        echo "$LINE"
+
+        ;;
+
+
+    "")
+
+        ;;
+
+
+    *)
+
+        echo "$LINE"
+
+        ;;
+
+
+    esac
+
+
+done
