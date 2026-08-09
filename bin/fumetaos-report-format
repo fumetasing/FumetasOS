@@ -42,6 +42,14 @@ do
         ;;
 
 
+    "⏱️ Timers FumetaOS")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
     "💚 SMART")
 
         echo "$SEPARATOR"
