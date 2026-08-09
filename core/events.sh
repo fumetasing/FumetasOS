@@ -5,9 +5,40 @@
 # Events
 ###########################################################
 
-
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+
+EVENTS_FILE="$DATA_DIR/events.log"
+
+
+mkdir -p "$DATA_DIR"
+
+
+
+###########################################################
+# Registrar evento
+###########################################################
+
+event_log()
+{
+
+TYPE="$1"
+TITLE="$2"
+MESSAGE="$3"
+
+
+DATE=$(date +"%Y-%m-%d %H:%M:%S")
+
+
+echo "$DATE | $TYPE | $TITLE | $MESSAGE" >> "$EVENTS_FILE"
+
+}
+
+
+
+###########################################################
+# Enviar evento
+###########################################################
 
 event_send()
 {
@@ -52,6 +83,14 @@ ICON="ℹ️"
 esac
 
 
+
+event_log \
+"$TYPE" \
+"$TITLE" \
+"$MESSAGE"
+
+
+
 TEXT="
 ${ICON} FumetaOS ${TYPE^^}
 
@@ -69,6 +108,11 @@ echo "$TEXT" | "$BIN_DIR/telegram-notify"
 }
 
 
+
+###########################################################
+# Tipos de evento
+###########################################################
+
 event_warning()
 {
 
@@ -78,6 +122,7 @@ warning \
 "$2"
 
 }
+
 
 
 event_error()
@@ -91,6 +136,7 @@ error \
 }
 
 
+
 event_recovery()
 {
 
@@ -100,6 +146,7 @@ recovery \
 "$2"
 
 }
+
 
 
 event_info()

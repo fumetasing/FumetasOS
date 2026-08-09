@@ -1,0 +1,124 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Events Viewer
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+
+
+EVENTS_FILE="$DATA_DIR/events.log"
+
+
+line()
+{
+    printf '═%.0s' {1..40}
+}
+
+
+top()
+{
+    echo "╔$(line)╗"
+}
+
+
+bottom()
+{
+    echo "╚$(line)╝"
+}
+
+
+separator()
+{
+    echo "╠$(line)╣"
+}
+
+
+box()
+{
+    TEXT="$1"
+
+    echo "║ $TEXT"
+}
+
+
+close()
+{
+    echo "║"
+}
+
+
+
+echo
+
+top
+
+echo "║ 📜 FumetaOS EVENTS"
+separator
+
+
+if [ ! -f "$EVENTS_FILE" ]
+then
+
+    echo "║ Sin eventos registrados"
+
+    bottom
+
+    exit 0
+
+fi
+
+
+
+tail -10 "$EVENTS_FILE" | while IFS="|" read DATE TYPE TITLE MESSAGE
+do
+
+
+    DATE=$(echo "$DATE" | xargs)
+    TYPE=$(echo "$TYPE" | xargs)
+    TITLE=$(echo "$TITLE" | xargs)
+    MESSAGE=$(echo "$MESSAGE" | xargs)
+
+
+    case "$TYPE" in
+
+    info)
+        ICON="🟢"
+        ;;
+
+    warning)
+        ICON="🟡"
+        ;;
+
+    error)
+        ICON="🔴"
+        ;;
+
+    recovery)
+        ICON="🟢"
+        ;;
+
+    *)
+        ICON="ℹ️"
+        ;;
+
+    esac
+
+
+    echo "║"
+    echo "║ $ICON ${TYPE^^}"
+    echo "║ $TITLE"
+    echo "║ $MESSAGE"
+    echo "║ $DATE"
+
+
+    separator
+
+
+done
+
+
+bottom
+
+echo
