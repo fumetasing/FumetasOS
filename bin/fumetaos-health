@@ -48,15 +48,15 @@ RET=$?
 
 
 echo
-echo "🌡️ Temperatura"
-/opt/fumetaos/modules/monitor/temperature.sh
+echo "💾 Discos"
+/opt/fumetaos/modules/monitor/disks.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
 
 echo
-echo "💾 Discos"
-/opt/fumetaos/modules/monitor/disks.sh
+echo "🌡️ Temperatura"
+/opt/fumetaos/modules/monitor/temperature.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
