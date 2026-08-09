@@ -68,6 +68,11 @@ echo "   Vigilancia del sistema"
 
 echo
 
+echo "fumetaos services"
+echo "   Estado de servicios y timers"
+
+echo
+
 echo "fumetaos build"
 echo "   Construir paquete FumetaOS"
 
@@ -152,6 +157,13 @@ watch)
 
     shift
     exec "$BIN_DIR/fumetaos-watch" "$@"
+    ;;
+
+
+services)
+
+    shift
+    exec "$BIN_DIR/fumetaos-services" "$@"
     ;;
 
 

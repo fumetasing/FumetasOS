@@ -1,0 +1,61 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Services Manager
+###########################################################
+
+source "$(dirname "$0")/../core/common.sh"
+source "$CORE_DIR/services.sh"
+
+
+mostrar_help()
+{
+
+echo
+
+echo "⚙️ FumetaOS Services"
+
+echo
+
+echo "Uso:"
+
+echo
+
+echo "fumetaos services"
+echo "   Mostrar estado de servicios y timers"
+
+echo
+
+}
+
+
+mostrar_servicios()
+{
+
+services_show
+
+}
+
+
+
+case "$1" in
+
+""|show|status)
+
+    mostrar_servicios
+    ;;
+
+
+help)
+
+    mostrar_help
+    ;;
+
+
+*)
+
+    mostrar_help
+    ;;
+
+esac
