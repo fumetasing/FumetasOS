@@ -37,7 +37,7 @@ echo "$DATE | $TYPE | $TITLE | $MESSAGE" >> "$EVENTS_FILE"
 
 
 ###########################################################
-# Enviar evento
+# Enviar evento Telegram
 ###########################################################
 
 event_send()
@@ -53,35 +53,35 @@ case "$TYPE" in
 info)
 
 ICON="🟢"
-TITLE_ICON="ℹ️"
+HEADER="INFO"
 
 ;;
 
 warning)
 
 ICON="🟡"
-TITLE_ICON="⚠️"
+HEADER="WARNING"
 
 ;;
 
 error)
 
 ICON="🔴"
-TITLE_ICON="🚨"
+HEADER="ERROR"
 
 ;;
 
 recovery)
 
 ICON="🟢"
-TITLE_ICON="✅"
+HEADER="RECOVERY"
 
 ;;
 
 *)
 
 ICON="ℹ️"
-TITLE_ICON="📌"
+HEADER="EVENT"
 
 ;;
 
@@ -96,14 +96,22 @@ event_log \
 
 
 
-TEXT="
-${ICON} FumetaOS ${TYPE^^}
+DATE=$(date '+%d/%m/%Y %H:%M')
 
-${TITLE_ICON} ${TITLE}
+
+
+TEXT="
+━━━━━━━━━━━━━━━━
+
+${ICON} FumetaOS ${HEADER}
+
+${TITLE}
 
 ${MESSAGE}
 
-🕒 $(date '+%d/%m/%Y %H:%M')
+🕒 ${DATE}
+
+━━━━━━━━━━━━━━━━
 "
 
 
