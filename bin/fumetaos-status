@@ -5,39 +5,138 @@
 # Status
 ###########################################################
 
-source /opt/fumetaos/core/common.sh
+source "$(dirname "$0")/../core/common.sh"
+source "$CORE_DIR/system.sh"
+source "$CORE_DIR/services.sh"
 
-CPU=$(sensors | awk '/Package id 0:/ {gsub("\\+|°C","",$4); print int($4)}')
-RAM=$(free | awk '/Mem:/ {printf "%.0f", $3/$2*100}')
-DISCO=$(df /mnt/datos | awk 'NR==2 {gsub("%","",$5); print $5}')
-UPDATES=$(apt list --upgradable 2>/dev/null | tail -n +2 | wc -l)
 
-ESTADO="🟢 PERFECTO"
+###########################################################
+# Versión
+###########################################################
+
+VERSION="desconocida"
+
+if [ -f "$VERSION_FILE" ]; then
+    VERSION=$(cat "$VERSION_FILE")
+fi
+
+
+###########################################################
+# Recursos
+###########################################################
+
+CPU=$(cpu_temp)
+
+RAM=$(ram_usage)
+
+SYSTEM_DISK=$(df / | awk 'NR==2 {gsub("%","",$5); print $5}')
+
+DATA_DISK=$(disk_usage)
+
+UPDATES=$(updates_available)
+
+
+
+###########################################################
+# Estado general
+###########################################################
+
+STATUS="🟢 PERFECTO"
+
 
 if [ "$CPU" -ge "$CPU_WARNING" ] || \
    [ "$RAM" -ge "$RAM_WARNING" ] || \
-   [ "$DISCO" -ge "$DISK_WARNING" ] || \
-   [ "$UPDATES" -gt 0 ]; then
+   [ "$DATA_DISK" -ge "$DISK_WARNING" ] || \
+   [ "$UPDATES" -gt 0 ]
+then
 
-    ESTADO="🟡 AVISOS"
+    STATUS="🟡 AVISOS"
 
 fi
+
 
 if [ "$CPU" -ge "$CPU_CRITICAL" ] || \
    [ "$RAM" -ge "$RAM_CRITICAL" ] || \
-   [ "$DISCO" -ge "$DISK_CRITICAL" ]; then
+   [ "$DATA_DISK" -ge "$DISK_CRITICAL" ]
+then
 
-    ESTADO="🔴 REVISAR"
+    STATUS="🔴 REVISAR"
 
 fi
 
+
+###########################################################
+# Contadores servicios
+###########################################################
+
+SERVICES_OK=0
+SERVICES_TOTAL=0
+
+
+for SERVICE in $SYSTEM_SERVICES
+do
+
+    SERVICES_TOTAL=$((SERVICES_TOTAL+1))
+
+    if [ "$(service_state "$SERVICE")" = "active" ]
+    then
+        SERVICES_OK=$((SERVICES_OK+1))
+    fi
+
+done
+
+
+###########################################################
+# Contadores timers
+###########################################################
+
+TIMERS_OK=0
+TIMERS_TOTAL=0
+
+
+for TIMER in $FUMETAOS_TIMERS
+do
+
+    TIMERS_TOTAL=$((TIMERS_TOTAL+1))
+
+    if [ "$(timer_state "$TIMER")" = "active" ]
+    then
+        TIMERS_OK=$((TIMERS_OK+1))
+    fi
+
+done
+
+
+###########################################################
+# Salida
+###########################################################
+
 echo
-echo "🖥️ FumetaOS"
+
+echo "🖥️ FumetaOS v$VERSION"
+
 echo
-echo "Estado: $ESTADO"
+
+echo "Estado: $STATUS"
+
 echo
+
 echo "🌡️ CPU: ${CPU}°C"
+
 echo "🧠 RAM: ${RAM}%"
-echo "💾 Disco: ${DISCO}%"
+
+echo "💾 SSD Sistema: ${SYSTEM_DISK}%"
+
+echo "💾 HDD Datos: ${DATA_DISK}%"
+
+echo
+
+echo "🛠️ Servicios: ${SERVICES_OK}/${SERVICES_TOTAL}"
+
+echo "⏱️ Timers: ${TIMERS_OK}/${TIMERS_TOTAL}"
+
+echo
+
 echo "📦 Actualizaciones: $UPDATES"
+
 echo
