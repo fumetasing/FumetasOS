@@ -1,13 +1,14 @@
 #!/bin/bash
 
 ###########################################################
-# FumetaOS Dashboard v3.1
+# FumetaOS Dashboard v3.2
 # Terminal Console
 ###########################################################
 
 source /opt/fumetaos/core/common.sh
 source /opt/fumetaos/core/system.sh
 source /opt/fumetaos/core/apps.sh
+source /opt/fumetaos/core/services.sh
 
 
 WIDTH=42
@@ -144,10 +145,30 @@ separator
 box "SERVICIOS"
 
 
-for SERVICE in docker ssh tailscaled
+box "TIMERS FUMETAOS"
+
+
+for TIMER in $FUMETAOS_TIMERS
 do
 
-    if systemctl is-active --quiet "$SERVICE"
+    if timer_state "$TIMER" | grep -q active
+    then
+        box "[OK] ${TIMER%.timer}"
+    else
+        box "[--] ${TIMER%.timer}"
+    fi
+
+done
+
+
+
+box "SISTEMA"
+
+
+for SERVICE in $SYSTEM_SERVICES
+do
+
+    if service_state "$SERVICE" | grep -q active
     then
         box "[OK] $SERVICE"
     else
