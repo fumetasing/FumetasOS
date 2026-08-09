@@ -53,30 +53,35 @@ case "$TYPE" in
 info)
 
 ICON="🟢"
+TITLE_ICON="ℹ️"
 
 ;;
 
 warning)
 
 ICON="🟡"
+TITLE_ICON="⚠️"
 
 ;;
 
 error)
 
 ICON="🔴"
+TITLE_ICON="🚨"
 
 ;;
 
 recovery)
 
 ICON="🟢"
+TITLE_ICON="✅"
 
 ;;
 
 *)
 
 ICON="ℹ️"
+TITLE_ICON="📌"
 
 ;;
 
@@ -94,13 +99,13 @@ event_log \
 TEXT="
 ${ICON} FumetaOS ${TYPE^^}
 
-${TITLE}
+${TITLE_ICON} ${TITLE}
 
 ${MESSAGE}
 
-Hora:
-$(date '+%d/%m/%Y %H:%M')
+🕒 $(date '+%d/%m/%Y %H:%M')
 "
+
 
 
 echo "$TEXT" | "$BIN_DIR/telegram-notify"
