@@ -1,0 +1,107 @@
+#!/bin/bash
+
+###########################################################
+# FumetaOS
+# Package Builder
+###########################################################
+
+SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
+
+PACKAGE="/opt/fumetaos/install/package"
+
+
+echo
+echo "🏗️ FumetaOS Package Builder"
+echo
+
+echo "Origen:"
+echo "$SOURCE"
+
+echo
+
+echo "Destino:"
+echo "$PACKAGE"
+
+echo
+
+
+if [ ! -d "$PACKAGE" ]; then
+
+    echo "📁 Creando paquete"
+
+    sudo mkdir -p "$PACKAGE"
+
+fi
+
+
+echo "🧹 Limpiando paquete anterior"
+
+sudo rm -rf \
+"$PACKAGE/bin" \
+"$PACKAGE/core" \
+"$PACKAGE/modules" \
+"$PACKAGE/config" \
+"$PACKAGE/services"
+
+
+echo "📦 Copiando bin"
+
+sudo cp -r \
+"$SOURCE/bin" \
+"$PACKAGE/"
+
+
+echo "📦 Copiando core"
+
+sudo cp -r \
+"$SOURCE/core" \
+"$PACKAGE/"
+
+
+echo "📦 Copiando módulos"
+
+sudo cp -r \
+"$SOURCE/modules" \
+"$PACKAGE/"
+
+
+echo "📦 Copiando servicios"
+
+sudo cp -r \
+"$SOURCE/services" \
+"$PACKAGE/"
+
+
+echo "📦 Copiando configuración"
+
+sudo cp -r \
+"$SOURCE/config" \
+"$PACKAGE/"
+
+
+echo "🏷️ Copiando versión"
+
+sudo cp \
+"$SOURCE/VERSION" \
+"$PACKAGE/VERSION"
+
+
+echo
+
+echo "🔒 Ajustando permisos"
+
+sudo chmod -R 755 "$PACKAGE/bin"
+sudo chmod -R 755 "$PACKAGE/core"
+sudo chmod -R 755 "$PACKAGE/modules"
+sudo chmod -R 755 "$PACKAGE/services"
+
+
+echo
+
+echo "✅ Paquete generado correctamente"
+
+echo
+
+ls -la "$PACKAGE"
+
+echo
