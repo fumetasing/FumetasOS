@@ -10,6 +10,16 @@ PACKAGE="$BASE/install/package"
 BACKUP_DIR="/mnt/datos/backups/fumetaos"
 
 
+FUMETAOS_TIMERS="
+fumetaos-watch.timer
+fumetaos-history.timer
+fumetaos-history-clean.timer
+fumetaos-report.timer
+fumetaos-backup.timer
+"
+
+
+
 leer_version()
 {
 
@@ -27,17 +37,6 @@ fi
 }
 
 
-echo
-echo "🔄 FumetaOS Update"
-echo
-
-
-leer_version
-
-
-echo "Versión destino: $FUMETAOS_VERSION"
-echo
-
 
 crear_backup()
 {
@@ -48,6 +47,7 @@ FILE="$BACKUP_DIR/fumetaos-update-$DATE.tar.gz"
 
 
 echo "💾 Creando backup previo..."
+
 
 mkdir -p "$BACKUP_DIR"
 
@@ -70,15 +70,23 @@ else
 fi
 
 
-echo
-
 }
+
 
 
 actualizar()
 {
 
-echo "🔎 Comprobando paquete"
+echo
+echo "🔄 FumetaOS Update"
+echo
+
+
+leer_version
+
+
+echo "Versión destino: $FUMETAOS_VERSION"
+echo
 
 
 if [ ! -d "$PACKAGE" ]; then
@@ -89,21 +97,20 @@ if [ ! -d "$PACKAGE" ]; then
 fi
 
 
+
 crear_backup
 
 
-echo "📦 Actualizando binarios"
 
+echo "📦 Actualizando binarios"
 cp -r "$PACKAGE/bin" "$BASE/"
 
 
 echo "📦 Actualizando core"
-
 cp -r "$PACKAGE/core" "$BASE/"
 
 
 echo "📦 Actualizando módulos"
-
 cp -r "$PACKAGE/modules" "$BASE/"
 
 
@@ -117,22 +124,44 @@ echo "🔄 Recargando systemd"
 systemctl daemon-reload
 
 
+
+echo
+
+echo "⏱️ Actualizando timers"
+
+
+for TIMER in $FUMETAOS_TIMERS
+do
+
+    systemctl enable "$TIMER"
+    systemctl restart "$TIMER"
+
+done
+
+
+
+echo
+
 echo "🏷️ Actualizando versión"
 
 echo "$FUMETAOS_VERSION" > "$BASE/VERSION"
 
 
+
 echo
+
 echo "🩺 Ejecutando Doctor"
 
 "$BASE/bin/fumetaos-doctor"
 
 
-echo
-echo "✅ Actualización completada"
+
 echo
 
+echo "✅ Actualización completada"
+
 }
+
 
 
 case "$1" in

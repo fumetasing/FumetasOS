@@ -10,6 +10,15 @@ PACKAGE="$BASE/install/package"
 BACKUP_DIR="/mnt/datos/backups/fumetaos"
 
 
+FUMETAOS_TIMERS="
+fumetaos-watch.timer
+fumetaos-history.timer
+fumetaos-history-clean.timer
+fumetaos-report.timer
+fumetaos-backup.timer
+"
+
+
 leer_version()
 {
 
@@ -37,6 +46,7 @@ leer_version
 
 echo "Versión instalador: $FUMETAOS_VERSION"
 echo
+
 
 
 check_system()
@@ -76,16 +86,8 @@ fi
 
 echo
 
-if [ -d "$BASE" ]; then
-
-    echo "✅ Directorio FumetaOS encontrado"
-
-fi
-
-
-echo
-
 }
+
 
 
 crear_backup_previo()
@@ -135,6 +137,7 @@ echo
 }
 
 
+
 simular()
 {
 
@@ -155,22 +158,9 @@ echo "✅ core"
 echo "✅ modules"
 
 
-if [ -f "$BASE/config/fumetaos.conf" ]; then
-
-    echo "⏭️ config (existente, conservaría)"
-
-else
-
-    echo "✅ config"
-
-fi
-
-
 echo
 
 echo "⚙️ Instalaría servicios:"
-echo
-
 
 for SERVICE in "$PACKAGE/services/"*
 do
@@ -183,13 +173,13 @@ done
 echo
 
 echo "⏱️ Activaría timers:"
-echo
 
-echo "✅ fumetaos-watch.timer"
-echo "✅ fumetaos-history.timer"
-echo "✅ fumetaos-history-clean.timer"
-echo "✅ fumetaos-report.timer"
-echo "✅ fumetaos-backup.timer"
+for TIMER in $FUMETAOS_TIMERS
+do
+
+    echo "✅ $TIMER"
+
+done
 
 
 echo
@@ -201,11 +191,9 @@ echo "$FUMETAOS_VERSION"
 echo
 
 echo "✅ Simulación completada"
-echo "❗ No se han realizado cambios"
-
-echo
 
 }
+
 
 
 instalar()
@@ -227,23 +215,18 @@ fi
 crear_backup_previo
 
 
-echo "📁 Creando estructura"
-
 mkdir -p "$BASE/data"
 
 
 echo "📦 Copiando binarios"
-
 cp -r "$PACKAGE/bin" "$BASE/"
 
 
 echo "📦 Copiando core"
-
 cp -r "$PACKAGE/core" "$BASE/"
 
 
 echo "📦 Copiando módulos"
-
 cp -r "$PACKAGE/modules" "$BASE/"
 
 
@@ -260,6 +243,7 @@ else
 fi
 
 
+
 echo "⚙️ Instalando servicios"
 
 cp "$PACKAGE/services/"* /etc/systemd/system/
@@ -270,24 +254,19 @@ echo "🔄 Recargando systemd"
 systemctl daemon-reload
 
 
+
 echo
 echo "⏱️ Activando timers"
 
 
-for TIMER in \
-fumetaos-watch.timer \
-fumetaos-history.timer \
-fumetaos-history-clean.timer \
-fumetaos-report.timer \
-fumetaos-backup.timer
-
+for TIMER in $FUMETAOS_TIMERS
 do
 
     systemctl enable "$TIMER"
-
     systemctl start "$TIMER"
 
 done
+
 
 
 echo
@@ -297,6 +276,7 @@ echo "🏷️ Actualizando versión"
 echo "$FUMETAOS_VERSION" > "$BASE/VERSION"
 
 
+
 echo
 
 echo "🩺 Doctor"
@@ -304,12 +284,13 @@ echo "🩺 Doctor"
 "$BASE/bin/fumetaos-doctor"
 
 
+
 echo
 
 echo "✅ FumetaOS instalado correctamente"
-echo
 
 }
+
 
 
 case "$1" in
