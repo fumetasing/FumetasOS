@@ -12,12 +12,28 @@
 source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/apps.sh"
 
+
 ###########################################################
 # Variables
 ###########################################################
 
 PUNTOS=0
 TOTAL=0
+
+
+###########################################################
+# Detectar paquete
+###########################################################
+
+PACKAGE_DIR="/opt/fumetaos/install/package"
+
+if [ -d "$INSTALL_DIR/package" ]; then
+
+    PACKAGE_DIR="$INSTALL_DIR/package"
+
+fi
+
+
 
 ###########################################################
 # Comprobación general
@@ -41,6 +57,8 @@ fi
 
 }
 
+
+
 ###########################################################
 # Inicio
 ###########################################################
@@ -49,6 +67,8 @@ echo
 echo "🩺 FumetaOS Doctor"
 echo
 
+
+
 ###########################################################
 # Sistema
 ###########################################################
@@ -56,11 +76,31 @@ echo
 echo "📁 Sistema"
 echo
 
+
 check "Configuración" test -f "$CONFIG_FILE"
 
 check "Versión" test -f "$VERSION_FILE"
 
 check "Scripts ejecutables" test -x "$BIN_DIR/fumetaos"
+
+
+
+###########################################################
+# Configuración
+###########################################################
+
+echo
+echo "🔧 Configuración"
+echo
+
+
+check "Telegram configurado" test -n "$TELEGRAM_TOKEN"
+
+check "SSD configurado" test -n "$SSD_DEVICE"
+
+check "HDD configurado" test -n "$HDD_DEVICE"
+
+
 
 ###########################################################
 # Servicios
@@ -70,23 +110,43 @@ echo
 echo "⚙️ Servicios"
 echo
 
+
 check "Docker" systemctl is-active --quiet docker
 
 check "CasaOS" systemctl is-active --quiet casaos
 
 check "Tailscale" systemctl is-active --quiet tailscaled
 
+check "SSH" systemctl is-active --quiet ssh
+
+
+
 ###########################################################
-# FumetaOS
+# Timers FumetaOS
 ###########################################################
 
 echo
-echo "🖥️ FumetaOS"
+echo "⏱️ Timers FumetaOS"
 echo
 
-check "Watch activo" systemctl is-active --quiet fumetaos-watch.timer
 
-check "History activo" systemctl is-active --quiet fumetaos-history.timer
+TIMERS="
+fumetaos-watch.timer
+fumetaos-history.timer
+fumetaos-history-clean.timer
+fumetaos-report.timer
+fumetaos-backup.timer
+"
+
+
+for TIMER in $TIMERS
+do
+
+    check "$TIMER" systemctl is-active --quiet "$TIMER"
+
+done
+
+
 
 ###########################################################
 # Aplicaciones
@@ -96,6 +156,7 @@ echo
 echo "📦 Aplicaciones"
 echo
 
+
 for APP in $(app_list)
 do
 
@@ -103,15 +164,44 @@ do
 
     TOTAL=$((TOTAL+1))
 
+
     if app_running
     then
+
         echo "✅ $APP_NAME"
+
         PUNTOS=$((PUNTOS+1))
+
     else
+
         echo "❌ $APP_NAME"
+
     fi
 
 done
+
+
+
+###########################################################
+# Paquete FumetaOS
+###########################################################
+
+echo
+echo "📦 Paquete"
+echo
+
+
+check "Paquete VERSION" test -f "$PACKAGE_DIR/VERSION"
+
+check "Paquete bin" test -d "$PACKAGE_DIR/bin"
+
+check "Paquete core" test -d "$PACKAGE_DIR/core"
+
+check "Paquete modules" test -d "$PACKAGE_DIR/modules"
+
+check "Paquete services" test -d "$PACKAGE_DIR/services"
+
+
 
 ###########################################################
 # Datos
@@ -121,9 +211,12 @@ echo
 echo "💾 Datos"
 echo
 
+
 check "Backup disponible" test -n "$(ls /mnt/datos/backups/fumetaos/fumetaos-backup-* 2>/dev/null | head -1)"
 
 check "Histórico funcionando" test -s "$DATA_DIR/history.log"
+
+
 
 ###########################################################
 # Resultado
@@ -131,15 +224,20 @@ check "Histórico funcionando" test -s "$DATA_DIR/history.log"
 
 echo
 
+
 PORCENTAJE=$((PUNTOS*100/TOTAL))
+
 
 echo "Resultado: $PUNTOS/$TOTAL (${PORCENTAJE}%)"
 
-if [ "$PORCENTAJE" -eq 100 ]; then
+
+if [ "$PORCENTAJE" -eq 100 ]
+then
 
     echo "Estado: 🟢 PERFECTO"
 
-elif [ "$PORCENTAJE" -ge 80 ]; then
+elif [ "$PORCENTAJE" -ge 80 ]
+then
 
     echo "Estado: 🟡 BUENO"
 
@@ -149,10 +247,12 @@ else
 
 fi
 
+
 echo
 
 echo "🏷️ Versión FumetaOS"
 
 cat "$VERSION_FILE" 2>/dev/null
+
 
 echo
