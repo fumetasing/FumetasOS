@@ -5,4 +5,6 @@
 # Report
 ###########################################################
 
-/opt/fumetaos/bin/fumetaos-health | /opt/fumetaos/bin/telegram-notify
+/opt/fumetaos/bin/fumetaos-health \
+| /opt/fumetaos/bin/fumetaos-report-format \
+| /opt/fumetaos/bin/telegram-notify
