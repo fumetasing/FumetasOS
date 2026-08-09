@@ -1,0 +1,25 @@
+[Unit]
+Description=FumetaOS Watch Monitor
+After=network.target docker.service
+
+Wants=docker.service
+
+
+[Service]
+
+Type=simple
+
+User=root
+
+WorkingDirectory=/opt/fumetaos
+
+ExecStart=/bin/bash -c 'while true; do /opt/fumetaos/bin/fumetaos watch run; sleep 300; done'
+
+Restart=always
+
+RestartSec=10
+
+
+[Install]
+
+WantedBy=multi-user.target
