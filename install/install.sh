@@ -114,9 +114,19 @@ FILE="$BACKUP_DIR/fumetaos-preinstall-$DATE.tar.gz"
 echo "💾 Creando backup previo..."
 
 
-tar -czf "$FILE" \
--C "$BASE" \
-bin core modules config VERSION 2>/dev/null
+if [ -d "$BASE/apps" ]; then
+
+    tar -czf "$FILE" \
+    -C "$BASE" \
+    bin core modules apps config VERSION
+
+else
+
+    tar -czf "$FILE" \
+    -C "$BASE" \
+    bin core modules config VERSION
+
+fi
 
 
 if [ $? -eq 0 ]; then
@@ -156,6 +166,7 @@ echo "📦 Copiaría:"
 echo "✅ bin"
 echo "✅ core"
 echo "✅ modules"
+echo "✅ apps"
 
 
 echo
@@ -228,6 +239,10 @@ cp -r "$PACKAGE/core" "$BASE/"
 
 echo "📦 Copiando módulos"
 cp -r "$PACKAGE/modules" "$BASE/"
+
+
+echo "📦 Copiando apps"
+cp -r "$PACKAGE/apps" "$BASE/"
 
 
 if [ ! -f "$BASE/config/fumetaos.conf" ]; then

@@ -40,6 +40,7 @@ sudo rm -rf \
 "$PACKAGE/bin" \
 "$PACKAGE/core" \
 "$PACKAGE/modules" \
+"$PACKAGE/apps" \
 "$PACKAGE/config" \
 "$PACKAGE/services"
 
@@ -62,6 +63,13 @@ echo "📦 Copiando módulos"
 
 sudo cp -r \
 "$SOURCE/modules" \
+"$PACKAGE/"
+
+
+echo "📦 Copiando apps"
+
+sudo cp -r \
+"$SOURCE/apps" \
 "$PACKAGE/"
 
 
@@ -93,6 +101,7 @@ echo "🔒 Ajustando permisos"
 sudo chmod -R 755 "$PACKAGE/bin"
 sudo chmod -R 755 "$PACKAGE/core"
 sudo chmod -R 755 "$PACKAGE/modules"
+sudo chmod -R 755 "$PACKAGE/apps"
 sudo chmod -R 755 "$PACKAGE/services"
 
 
