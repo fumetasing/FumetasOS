@@ -1,0 +1,12 @@
+[Unit]
+Description=Enviar informes diarios de FumetaOS
+
+
+[Timer]
+OnCalendar=*-*-* 07:45:00
+OnCalendar=*-*-* 22:15:00
+Persistent=true
+
+
+[Install]
+WantedBy=timers.target
