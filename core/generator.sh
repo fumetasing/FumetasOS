@@ -25,6 +25,17 @@ mkdir -p "$APP_DATA"
 FILE="$APP_DATA/compose.yaml"
 
 
+###########################################################
+# Puerto CasaOS
+###########################################################
+
+CASAOS_PORT_MAP="${APP_PORT_MAP:-$APP_PORT}"
+
+
+###########################################################
+# Compose base
+###########################################################
+
 cat > "$FILE" <<EOF_COMPOSE
 services:
 
@@ -124,6 +135,81 @@ cat >> "$FILE" <<EOF_RESTART
     restart: unless-stopped
 
 EOF_RESTART
+
+
+###########################################################
+# Label del icono
+###########################################################
+
+if [ -n "$APP_ICON_URL" ]; then
+
+cat >> "$FILE" <<EOF_LABELS
+
+    labels:
+
+      icon: $APP_ICON_URL
+
+EOF_LABELS
+
+fi
+
+
+###########################################################
+# Metadata CasaOS
+###########################################################
+
+cat >> "$FILE" <<EOF_CASAOS
+
+x-casaos:
+
+  architectures:
+
+    - amd64
+    - arm64
+
+
+  main: $APP_ID
+
+
+  author: FumetaOS
+
+
+  category: $APP_CATEGORY
+
+
+  developer: $APP_AUTHOR
+
+
+  icon: $APP_ICON_URL
+
+
+  index: $APP_INDEX
+
+
+  port_map: "$CASAOS_PORT_MAP"
+
+
+  scheme: http
+
+
+  store_app_id: $APP_ID
+
+
+  is_uncontrolled: true
+
+
+  title:
+
+    custom: ""
+
+    en_us: $APP_NAME
+
+
+  tagline:
+
+    en_us: $APP_DESCRIPTION
+
+EOF_CASAOS
 
 
 echo
