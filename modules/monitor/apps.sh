@@ -70,9 +70,13 @@ do
         echo "   Estado: 🟢 Ejecutando"
         echo "   Versión: $APP_VERSION"
 
-        if [ -n "$APP_URL" ]; then
-            echo "   URL: $APP_URL"
+
+        REPORT_URL=$(app_report_url)
+
+        if [ -n "$REPORT_URL" ]; then
+            echo "   URL: $REPORT_URL"
         fi
+
 
         if [ -n "$APP_PORT" ]; then
             echo "   Puerto: $APP_PORT"

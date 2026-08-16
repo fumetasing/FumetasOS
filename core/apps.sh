@@ -55,6 +55,35 @@ APP_PATH="$1"
 
 [ -f "$APP_PATH/app.conf" ] || return 1
 
+
+unset APP_ID
+unset APP_NAME
+unset APP_DESCRIPTION
+unset APP_CATEGORY
+unset APP_ICON
+unset APP_ICON_URL
+
+unset APP_TYPE
+unset APP_IMAGE
+unset APP_TAG
+unset APP_CONTAINER
+
+unset APP_INDEX
+unset APP_PORT
+unset APP_PORT_MAP
+unset APP_PORTS
+unset APP_URL
+unset APP_WEBUI
+
+unset APP_COMPOSE
+unset APP_DATA
+unset APP_ENV
+unset APP_VOLUMES
+
+unset APP_VERSION
+unset APP_AUTHOR
+
+
 source "$APP_PATH/app.conf"
 
 }
@@ -112,6 +141,22 @@ app_webui()
 {
 
 echo "$APP_WEBUI"
+
+}
+
+
+app_report_url()
+{
+
+if [ -n "$APP_URL" ]; then
+
+    echo "$APP_URL"
+
+elif [ -n "$APP_WEBUI" ]; then
+
+    echo "${APP_WEBUI//\[IP\]/localhost}"
+
+fi
 
 }
 
@@ -313,7 +358,9 @@ echo "Contenedor: $(app_container)"
 
 [ -n "$APP_PORT" ] && echo "Puerto: $APP_PORT"
 
-[ -n "$APP_URL" ] && echo "URL: $APP_URL"
+REPORT_URL=$(app_report_url)
+
+[ -n "$REPORT_URL" ] && echo "URL: $REPORT_URL"
 
 
 HEALTH=$(app_health)
