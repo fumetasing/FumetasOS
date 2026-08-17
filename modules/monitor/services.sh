@@ -17,6 +17,7 @@ SERVICES=(
     casaos
     docker
     tailscaled
+    noip-duc
     ssh
 )
 
