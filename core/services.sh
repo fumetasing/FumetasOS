@@ -1,8 +1,10 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Services Core
+
 ###########################################################
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -12,19 +14,21 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 # Servicios del sistema
 ###########################################################
 
-SYSTEM_SERVICES="
+SYSTEM_SERVICES="\
 docker
 ssh
 tailscaled
 casaos
+noip-duc
 "
+
 
 
 ###########################################################
 # Timers FumetaOS
 ###########################################################
 
-FUMETAOS_TIMERS="
+FUMETAOS_TIMERS="\
 fumetaos-watch.timer
 fumetaos-report.timer
 fumetaos-history.timer
@@ -42,7 +46,6 @@ service_state()
 {
 
 SERVICE="$1"
-
 
 if systemctl is-active --quiet "$SERVICE"
 then
@@ -67,7 +70,6 @@ timer_state()
 {
 
 TIMER="$1"
-
 
 if systemctl is-active --quiet "$TIMER"
 then
@@ -99,12 +101,10 @@ echo
 echo "⏱️ Timers"
 echo "─────────"
 
-
 for TIMER in $FUMETAOS_TIMERS
 do
 
 STATE=$(timer_state "$TIMER")
-
 
 if [ "$STATE" = "active" ]
 then
@@ -117,7 +117,6 @@ echo "🔴 $TIMER"
 
 fi
 
-
 done
 
 
@@ -127,13 +126,10 @@ echo
 echo "🛠️ Sistema"
 echo "──────────"
 
-
 for SERVICE in $SYSTEM_SERVICES
 do
 
-
 STATE=$(service_state "$SERVICE")
-
 
 if [ "$STATE" = "active" ]
 then
@@ -145,7 +141,6 @@ else
 echo "🔴 $SERVICE"
 
 fi
-
 
 done
 

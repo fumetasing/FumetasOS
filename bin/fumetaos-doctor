@@ -1,8 +1,10 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Doctor
+
 ###########################################################
 
 ###########################################################
@@ -49,10 +51,14 @@ TOTAL=$((TOTAL+1))
 
 if "$@"
 then
+
     echo "✅ $DESCRIPCION"
     PUNTOS=$((PUNTOS+1))
+
 else
+
     echo "❌ $DESCRIPCION"
+
 fi
 
 }
@@ -76,7 +82,6 @@ echo
 echo "📁 Sistema"
 echo
 
-
 check "Configuración" test -f "$CONFIG_FILE"
 
 check "Versión" test -f "$VERSION_FILE"
@@ -92,7 +97,6 @@ check "Scripts ejecutables" test -x "$BIN_DIR/fumetaos"
 echo
 echo "🔧 Configuración"
 echo
-
 
 check "Telegram configurado" test -n "$TELEGRAM_TOKEN"
 
@@ -110,12 +114,13 @@ echo
 echo "⚙️ Servicios"
 echo
 
-
 check "Docker" systemctl is-active --quiet docker
 
 check "CasaOS" systemctl is-active --quiet casaos
 
 check "Tailscale" systemctl is-active --quiet tailscaled
+
+check "No-IP DUC" systemctl is-active --quiet noip-duc
 
 check "SSH" systemctl is-active --quiet ssh
 
@@ -129,8 +134,7 @@ echo
 echo "⏱️ Timers FumetaOS"
 echo
 
-
-TIMERS="
+TIMERS="\
 fumetaos-watch.timer
 fumetaos-history.timer
 fumetaos-history-clean.timer
@@ -155,7 +159,6 @@ done
 echo
 echo "📦 Aplicaciones"
 echo
-
 
 for APP in $(app_list)
 do
@@ -190,7 +193,6 @@ echo
 echo "📦 Paquete"
 echo
 
-
 check "Paquete VERSION" test -f "$PACKAGE_DIR/VERSION"
 
 check "Paquete bin" test -d "$PACKAGE_DIR/bin"
@@ -211,7 +213,6 @@ echo
 echo "💾 Datos"
 echo
 
-
 check "Backup disponible" test -n "$(ls /mnt/datos/backups/fumetaos/fumetaos-backup-* 2>/dev/null | head -1)"
 
 check "Histórico funcionando" test -s "$DATA_DIR/history.log"
@@ -223,36 +224,5 @@ check "Histórico funcionando" test -s "$DATA_DIR/history.log"
 ###########################################################
 
 echo
-
-
-PORCENTAJE=$((PUNTOS*100/TOTAL))
-
-
-echo "Resultado: $PUNTOS/$TOTAL (${PORCENTAJE}%)"
-
-
-if [ "$PORCENTAJE" -eq 100 ]
-then
-
-    echo "Estado: 🟢 PERFECTO"
-
-elif [ "$PORCENTAJE" -ge 80 ]
-then
-
-    echo "Estado: 🟡 BUENO"
-
-else
-
-    echo "Estado: 🔴 REVISAR"
-
-fi
-
-
-echo
-
-echo "🏷️ Versión FumetaOS"
-
-cat "$VERSION_FILE" 2>/dev/null
-
-
+echo "Resultado: $PUNTOS/$TOTAL"
 echo
