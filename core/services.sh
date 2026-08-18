@@ -10,33 +10,6 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 
-###########################################################
-# Servicios del sistema
-###########################################################
-
-SYSTEM_SERVICES="\
-docker
-ssh
-tailscaled
-casaos
-noip-duc
-"
-
-
-
-###########################################################
-# Timers FumetaOS
-###########################################################
-
-FUMETAOS_TIMERS="\
-fumetaos-watch.timer
-fumetaos-report.timer
-fumetaos-history.timer
-fumetaos-history-clean.timer
-fumetaos-backup.timer
-"
-
-
 
 ###########################################################
 # Estado servicio
@@ -50,11 +23,11 @@ SERVICE="$1"
 if systemctl is-active --quiet "$SERVICE"
 then
 
-echo "active"
+    echo "active"
 
 else
 
-echo "inactive"
+    echo "inactive"
 
 fi
 
@@ -74,11 +47,11 @@ TIMER="$1"
 if systemctl is-active --quiet "$TIMER"
 then
 
-echo "active"
+    echo "active"
 
 else
 
-echo "inactive"
+    echo "inactive"
 
 fi
 
@@ -101,46 +74,47 @@ echo
 echo "⏱️ Timers"
 echo "─────────"
 
+
 for TIMER in $FUMETAOS_TIMERS
 do
 
-STATE=$(timer_state "$TIMER")
+    STATE=$(timer_state "$TIMER")
 
-if [ "$STATE" = "active" ]
-then
+    if [ "$STATE" = "active" ]
+    then
 
-echo "🟢 $TIMER"
+        echo "🟢 $TIMER"
 
-else
+    else
 
-echo "🔴 $TIMER"
+        echo "🔴 $TIMER"
 
-fi
+    fi
 
 done
 
 
 echo
 
-
 echo "🛠️ Sistema"
 echo "──────────"
+
 
 for SERVICE in $SYSTEM_SERVICES
 do
 
-STATE=$(service_state "$SERVICE")
+    STATE=$(service_state "$SERVICE")
 
-if [ "$STATE" = "active" ]
-then
+    if [ "$STATE" = "active" ]
+    then
 
-echo "🟢 $SERVICE"
+        echo "🟢 $SERVICE"
 
-else
+    else
 
-echo "🔴 $SERVICE"
+        echo "🔴 $SERVICE"
 
-fi
+    fi
 
 done
 

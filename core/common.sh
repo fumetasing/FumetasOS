@@ -1,9 +1,12 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Common Library
+
 ###########################################################
+
 
 ###########################################################
 # Evitar cargar varias veces
@@ -13,12 +16,16 @@
 
 FUMETAOS_COMMON_LOADED=1
 
+
+
 ###########################################################
 # Detectar directorio base de FumetaOS
 ###########################################################
 
 COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FUMETAOS_HOME="$(dirname "$COMMON_DIR")"
+
+
 
 ###########################################################
 # Directorios
@@ -35,12 +42,17 @@ LIBEXEC_DIR="$FUMETAOS_HOME/libexec"
 SERVICES_DIR="$FUMETAOS_HOME/services"
 APPS_DIR="$FUMETAOS_HOME/apps"
 
+
+
 ###########################################################
 # Archivos
 ###########################################################
 
 VERSION_FILE="$FUMETAOS_HOME/VERSION"
 CONFIG_FILE="$CONFIG_DIR/fumetaos.conf"
+SERVICES_CONFIG="$CORE_DIR/services.conf"
+
+
 
 ###########################################################
 # Cargar configuración
@@ -52,6 +64,20 @@ if [ -f "$CONFIG_FILE" ]; then
 
 fi
 
+
+
+###########################################################
+# Cargar servicios FumetaOS
+###########################################################
+
+if [ -f "$SERVICES_CONFIG" ]; then
+
+    source "$SERVICES_CONFIG"
+
+fi
+
+
+
 ###########################################################
 # Utilidades
 ###########################################################
@@ -59,9 +85,10 @@ fi
 command_exists()
 {
 
-    command -v "$1" >/dev/null 2>&1
+command -v "$1" >/dev/null 2>&1
 
 }
+
 
 
 disk_name()
@@ -74,9 +101,11 @@ if [ "$DEVICE" = "$SSD_DEVICE" ]; then
 
     echo "$SSD_NAME"
 
+
 elif [ "$DEVICE" = "$HDD_DEVICE" ]; then
 
     echo "$HDD_NAME"
+
 
 else
 
@@ -85,6 +114,7 @@ else
 fi
 
 }
+
 
 
 smartctl_cmd()
