@@ -15,12 +15,14 @@ source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/apps.sh"
 
 
+
 ###########################################################
 # Variables
 ###########################################################
 
 PUNTOS=0
 TOTAL=0
+
 
 
 ###########################################################
@@ -60,6 +62,19 @@ else
     echo "❌ $DESCRIPCION"
 
 fi
+
+}
+
+
+
+###########################################################
+# Funciones seguridad
+###########################################################
+
+firewall_active()
+{
+
+sudo ufw status 2>/dev/null | grep -q "Status: active"
 
 }
 
@@ -107,6 +122,18 @@ check "HDD configurado" test -n "$HDD_DEVICE"
 
 
 ###########################################################
+# Seguridad
+###########################################################
+
+echo
+echo "🔒 Seguridad"
+echo
+
+check "Firewall UFW" firewall_active
+
+
+
+###########################################################
 # Servicios
 ###########################################################
 
@@ -134,7 +161,7 @@ echo
 echo "⏱️ Timers FumetaOS"
 echo
 
-TIMERS="\
+TIMERS="
 fumetaos-watch.timer
 fumetaos-history.timer
 fumetaos-history-clean.timer
@@ -159,6 +186,7 @@ done
 echo
 echo "📦 Aplicaciones"
 echo
+
 
 for APP in $(app_list)
 do
@@ -193,6 +221,7 @@ echo
 echo "📦 Paquete"
 echo
 
+
 check "Paquete VERSION" test -f "$PACKAGE_DIR/VERSION"
 
 check "Paquete bin" test -d "$PACKAGE_DIR/bin"
@@ -212,6 +241,7 @@ check "Paquete services" test -d "$PACKAGE_DIR/services"
 echo
 echo "💾 Datos"
 echo
+
 
 check "Backup disponible" test -n "$(ls /mnt/datos/backups/fumetaos/fumetaos-backup-* 2>/dev/null | head -1)"
 
