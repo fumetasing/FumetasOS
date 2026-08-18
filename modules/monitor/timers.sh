@@ -1,26 +1,23 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
+
 # Monitor de timers
+
 ###########################################################
 
+source "$(dirname "$0")/../../core/common.sh"
+
+
 ERROR=0
-
-
-TIMERS=(
-    fumetaos-watch.timer
-    fumetaos-report.timer
-    fumetaos-history.timer
-    fumetaos-history-clean.timer
-    fumetaos-backup.timer
-)
 
 
 echo
 
 
-for TIMER in "${TIMERS[@]}"
+for TIMER in $FUMETAOS_TIMERS
 do
 
     if systemctl is-active --quiet "$TIMER"

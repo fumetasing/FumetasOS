@@ -3,6 +3,7 @@
 ###########################################################
 
 # FumetaOS
+
 # Doctor
 
 ###########################################################
@@ -161,16 +162,8 @@ echo
 echo "⏱️ Timers FumetaOS"
 echo
 
-TIMERS="
-fumetaos-watch.timer
-fumetaos-history.timer
-fumetaos-history-clean.timer
-fumetaos-report.timer
-fumetaos-backup.timer
-"
 
-
-for TIMER in $TIMERS
+for TIMER in $FUMETAOS_TIMERS
 do
 
     check "$TIMER" systemctl is-active --quiet "$TIMER"
