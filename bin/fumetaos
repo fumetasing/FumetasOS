@@ -1,13 +1,19 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Main CLI
+
 ###########################################################
 
-BIN_DIR="$(dirname "$0")"
+
+SCRIPT_PATH="$(readlink -f "$0")"
+BIN_DIR="$(dirname "$SCRIPT_PATH")"
+
 
 source "$BIN_DIR/../core/common.sh"
+
 
 
 mostrar_help()
@@ -106,6 +112,7 @@ echo
 }
 
 
+
 case "$1" in
 
 
@@ -162,8 +169,7 @@ watch)
 
 services)
 
-    shift
-    exec "$BIN_DIR/fumetaos-services" "$@"
+    exec "$BIN_DIR/fumetaos-services"
     ;;
 
 
@@ -198,7 +204,7 @@ config)
 
 
 help|"")
-
+    
     mostrar_help
     ;;
 
@@ -208,11 +214,7 @@ help|"")
     echo
     echo "❌ Comando desconocido: $1"
     echo
-    echo "Usa:"
-    echo
-    echo "fumetaos help"
-    echo
-
+    mostrar_help
     exit 1
     ;;
 
