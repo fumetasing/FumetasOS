@@ -1,31 +1,87 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Telegram Notify
+
 ###########################################################
 
 CONFIG="/opt/fumetaos/config/fumetaos.conf"
 
-if [ ! -f "$CONFIG" ]; then
+
+###########################################################
+# Configuración
+###########################################################
+
+if [ ! -f "$CONFIG" ]
+then
+
     echo "No existe $CONFIG"
     exit 1
+
 fi
+
 
 . "$CONFIG"
 
-if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+
+
+if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]
+then
+
     echo "Telegram no configurado"
     exit 1
+
 fi
+
+
+
+###########################################################
+# Mensaje
+###########################################################
 
 MESSAGE=$(cat)
 
-curl -s \
-    -X POST \
-    "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
-    -d chat_id="$TELEGRAM_CHAT_ID" \
-    --data-urlencode text="$MESSAGE" \
-    >/dev/null
 
-exit 0
+
+if [ -z "$MESSAGE" ]
+then
+
+    echo "Mensaje vacío"
+    exit 1
+
+fi
+
+
+
+###########################################################
+# Envío Telegram
+###########################################################
+
+RESPONSE=$(curl -s \
+-X POST \
+"https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+-d chat_id="$TELEGRAM_CHAT_ID" \
+--data-urlencode text="$MESSAGE"
+)
+
+
+
+###########################################################
+# Validación
+###########################################################
+
+if echo "$RESPONSE" | grep -q '"ok":true'
+then
+
+    exit 0
+
+else
+
+    echo "Error enviando Telegram"
+    echo "$RESPONSE"
+
+    exit 1
+
+fi
