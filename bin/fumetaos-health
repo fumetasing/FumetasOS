@@ -14,21 +14,21 @@ ERROR=0
 TELEGRAM=0
 
 if [ "$1" = "--telegram" ]; then
-TELEGRAM=1
+    TELEGRAM=1
 fi
-
 
 
 if [ -f "$VERSION_FILE" ]; then
-FUMETAOS_VERSION=$(cat "$VERSION_FILE")
+    FUMETAOS_VERSION=$(cat "$VERSION_FILE")
 else
-FUMETAOS_VERSION="desconocida"
+    FUMETAOS_VERSION="desconocida"
 fi
 
 
-
 ###########################################################
-# Funciones formato Telegram
+
+# Formato
+
 ###########################################################
 
 separator()
@@ -36,14 +36,9 @@ separator()
 echo "━━━━━━━━━━━━━━━━"
 }
 
-section()
-{
-echo "$1"
-}
-
-
 
 if [ "$TELEGRAM" -eq 1 ]; then
+
 
 echo "🖥️ FumetaOS DAILY REPORT"
 separator
@@ -55,6 +50,7 @@ echo
 echo "🖥️ Sistema"
 /opt/fumetaos/modules/monitor/system.sh
 
+
 separator
 
 echo "🛠️ Servicios"
@@ -62,18 +58,6 @@ echo "🛠️ Servicios"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
-echo
-echo "⏱️ Timers FumetaOS"
-/opt/fumetaos/modules/monitor/timers.sh
-RET=$?
-[ "$RET" -gt "$ERROR" ] && ERROR=$RET
-
-separator
-
-echo "💚 SMART"
-/opt/fumetaos/modules/monitor/smart.sh
-RET=$?
-[ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
 separator
 
@@ -82,12 +66,30 @@ echo "🔒 Seguridad"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
+separator
+
+echo "⏱️ Timers FumetaOS"
+/opt/fumetaos/modules/monitor/timers.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+
+separator
+
+echo "💚 SMART"
+/opt/fumetaos/modules/monitor/smart.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+
 separator
 
 echo "💾 Discos"
 /opt/fumetaos/modules/monitor/disks.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
 
 separator
 
@@ -96,12 +98,14 @@ echo "🌡️ Temperatura"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 separator
 
 echo "🧠 Memoria"
 /opt/fumetaos/modules/monitor/memory.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
 
 separator
 
@@ -110,76 +114,99 @@ echo "📦 Aplicaciones"
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 separator
 
 echo "📦 Actualizaciones"
 /opt/fumetaos/modules/monitor/updates.sh
 
+
 separator
+
 
 else
 
+
 echo
 echo "🖥️ FumetaOS v$FUMETAOS_VERSION"
+
 echo
 
 echo "🖥️ Sistema"
 /opt/fumetaos/modules/monitor/system.sh
 
+
 echo
+
 echo "🛠️ Servicios"
 /opt/fumetaos/modules/monitor/services.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
-echo
-echo "⏱️ Timers FumetaOS"
-/opt/fumetaos/modules/monitor/timers.sh
-RET=$?
-[ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
 echo
-echo "💚 SMART"
-/opt/fumetaos/modules/monitor/smart.sh
-RET=$?
-[ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
-echo
 echo "🔒 Seguridad"
 /opt/fumetaos/modules/monitor/security.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
+
+echo "⏱️ Timers FumetaOS"
+/opt/fumetaos/modules/monitor/timers.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+
+echo
+
+echo "💚 SMART"
+/opt/fumetaos/modules/monitor/smart.sh
+RET=$?
+[ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+
+echo
+
 echo "💾 Discos"
 /opt/fumetaos/modules/monitor/disks.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
+
 echo "🌡️ Temperatura"
 /opt/fumetaos/modules/monitor/temperature.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
+
 echo "🧠 Memoria"
 /opt/fumetaos/modules/monitor/memory.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
+
 echo "📦 Aplicaciones"
 /opt/fumetaos/modules/monitor/apps.sh
 RET=$?
 [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
+
 echo
+
 echo "📦 Actualizaciones"
 /opt/fumetaos/modules/monitor/updates.sh
 
-fi
 
+fi
 
 
 echo
@@ -199,5 +226,6 @@ case "$ERROR" in
     ;;
 
 esac
+
 
 exit "$ERROR"
