@@ -1,125 +1,133 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
+
 # Daily Report Formatter
+
 ###########################################################
 
 SEPARATOR="━━━━━━━━━━━━━━━━"
 
-
 echo "🖥️ FumetaOS DAILY REPORT"
 echo "$SEPARATOR"
-
 
 while IFS= read -r LINE
 do
 
-    case "$LINE" in
+case "$LINE" in
 
 
-    "🖥️ FumetaOS v"*)
+"🖥️ FumetaOS v"*)
 
-        echo "$LINE"
-        echo
+    echo "$LINE"
+    echo
 
-        ;;
-
-
-    "🖥️ Sistema")
-
-        echo "$LINE"
-        echo
-
-        ;;
+    ;;
 
 
-    "🛠️ Servicios")
+"🖥️ Sistema")
 
-        echo "$SEPARATOR"
-        echo "$LINE"
+    echo "$LINE"
+    echo
 
-        ;;
-
-
-    "⏱️ Timers FumetaOS")
-
-        echo "$SEPARATOR"
-        echo "$LINE"
-
-        ;;
+    ;;
 
 
-    "💚 SMART")
+"🛠️ Servicios")
 
-        echo "$SEPARATOR"
-        echo "$LINE"
+    echo "$SEPARATOR"
+    echo "$LINE"
 
-        ;;
-
-
-    "💾 Discos")
-
-        echo "$SEPARATOR"
-        echo "$LINE"
-
-        ;;
+    ;;
 
 
-    "🌡️ Temperatura")
+"🔒 Seguridad")
 
-        echo "$SEPARATOR"
-        echo "$LINE"
+    echo "$SEPARATOR"
+    echo "$LINE"
 
-        ;;
-
-
-    "🧠 Memoria")
-
-        echo "$SEPARATOR"
-        echo "$LINE"
-
-        ;;
+    ;;
 
 
-    "📦 Aplicaciones")
+"⏱️ Timers FumetaOS")
 
-        echo "$SEPARATOR"
-        echo "$LINE"
+    echo "$SEPARATOR"
+    echo "$LINE"
 
-        ;;
-
-
-    "📦 Actualizaciones")
-
-        echo "$SEPARATOR"
-        echo "$LINE"
-
-        ;;
+    ;;
 
 
-    "🟢 Estado general:"*)
+"💚 SMART")
 
-        echo "$SEPARATOR"
-        echo
-        echo "$LINE"
+    echo "$SEPARATOR"
+    echo "$LINE"
 
-        ;;
-
-
-    "")
-
-        ;;
+    ;;
 
 
-    *)
+"💾 Discos")
 
-        echo "$LINE"
+    echo "$SEPARATOR"
+    echo "$LINE"
 
-        ;;
+    ;;
 
 
-    esac
+"🌡️ Temperatura")
 
+    echo "$SEPARATOR"
+    echo "$LINE"
+
+    ;;
+
+
+"🧠 Memoria")
+
+    echo "$SEPARATOR"
+    echo "$LINE"
+
+    ;;
+
+
+"📦 Aplicaciones")
+
+    echo "$SEPARATOR"
+    echo "$LINE"
+
+    ;;
+
+
+"📦 Actualizaciones")
+
+    echo "$SEPARATOR"
+    echo "$LINE"
+
+    ;;
+
+
+"🟢 Estado general:"*)
+
+    echo "$SEPARATOR"
+    echo
+    echo "$LINE"
+
+    ;;
+
+
+"")
+
+    ;;
+
+
+*)
+
+    echo "$LINE"
+
+    ;;
+
+
+esac
 
 done
