@@ -3,7 +3,14 @@
 
 # Changelog
 
-## v2.3.22
+## v2.3.23
+
+### Improved
+
+- Improved FumetaOS Watch service monitoring.
+- Added warning state before reporting service failures.
+- Prevented repeated Telegram alerts during persistent service outages.
+- Improved service recovery detection.## v2.3.22
 
 ### Added
 
