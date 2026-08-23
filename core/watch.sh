@@ -1,10 +1,8 @@
 #!/bin/bash
 
 ###########################################################
-
 # FumetaOS
 # Watch Core
-
 ###########################################################
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
@@ -53,66 +51,62 @@ check_services()
 for SERVICE in $SYSTEM_SERVICES
 do
 
-if systemctl is-active --quiet "$SERVICE"
-then
-
-    CURRENT="ok"
-
-else
-
-    CURRENT="failed"
-
-fi
-
-
-OLD=$(state_get "service-$SERVICE")
-
-
-###########################################################
-# Servicio caído
-###########################################################
-
-if [ "$CURRENT" = "failed" ]
-then
-
-    if [ "$OLD" = "failed" ]
+    if systemctl is-active --quiet "$SERVICE"
     then
-
-        event_error \
-        "Servicio detenido" \
-        "$SERVICE no está activo"
-
+        CURRENT="ok"
     else
-
-        state_set "service-$SERVICE" "warning"
-
+        CURRENT="failed"
     fi
 
 
-###########################################################
-# Servicio recuperado
-###########################################################
+    OLD=$(state_get "service-$SERVICE")
 
-elif [ "$CURRENT" = "ok" ]
-then
 
-    if [ "$OLD" = "failed" ] || [ "$OLD" = "warning" ]
+    #######################################################
+    # Servicio caído
+    #######################################################
+
+    if [ "$CURRENT" = "failed" ]
     then
 
-        event_recovery \
-        "Servicio recuperado" \
-        "$SERVICE vuelve a estar activo"
+        if [ "$OLD" = "warning" ]
+        then
+
+            event_error \
+            "Servicio detenido" \
+            "$SERVICE no está activo"
+
+            state_set "service-$SERVICE" "failed"
+
+
+        elif [ "$OLD" = "ok" ] || [ -z "$OLD" ]
+        then
+
+            state_set "service-$SERVICE" "warning"
+
+        fi
+
+
+    #######################################################
+    # Servicio recuperado
+    #######################################################
+
+    elif [ "$CURRENT" = "ok" ]
+    then
+
+        if [ "$OLD" = "warning" ] || [ "$OLD" = "failed" ]
+        then
+
+            event_recovery \
+            "Servicio recuperado" \
+            "$SERVICE vuelve a estar activo"
+
+        fi
+
+
+        state_set "service-$SERVICE" "ok"
 
     fi
-
-fi
-
-
-###########################################################
-# Guardar estado
-###########################################################
-
-state_set "service-$SERVICE" "$CURRENT"
 
 
 done
