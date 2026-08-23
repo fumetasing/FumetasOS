@@ -1,9 +1,12 @@
 #!/bin/bash
 
-###########################################################
+############################################################
+
 # FumetaOS
+
 # Apps Core v2
-###########################################################
+
+############################################################
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -74,6 +77,8 @@ unset APP_PORT_MAP
 unset APP_PORTS
 unset APP_URL
 unset APP_WEBUI
+
+unset APP_HEALTH
 
 unset APP_COMPOSE
 unset APP_DATA
@@ -154,7 +159,7 @@ if [ -n "$APP_URL" ]; then
 
 elif [ -n "$APP_WEBUI" ]; then
 
-    echo "${APP_WEBUI//\[IP\]/localhost}"
+    echo "${APP_WEBUI//[IP]/localhost}"
 
 fi
 
@@ -179,12 +184,89 @@ docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"
 }
 
 
+############################################################
+# Health de aplicaciones
+############################################################
+
 app_health()
 {
 
 CONTAINER=$(app_container)
 
-docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null
+
+############################################################
+# Health nativo Docker
+############################################################
+
+DOCKER_HEALTH=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null)
+
+
+if [ "$DOCKER_HEALTH" = "healthy" ] || [ "$DOCKER_HEALTH" = "unhealthy" ]; then
+
+    echo "$DOCKER_HEALTH"
+    return
+
+fi
+
+
+############################################################
+# Health personalizado Transmission
+############################################################
+
+if [ "$APP_HEALTH" = "transmission" ]; then
+
+
+    RESPONSE=$(curl -si \
+    http://localhost:9091/transmission/rpc/ 2>/dev/null)
+
+
+    STATUS=$(echo "$RESPONSE" | head -1)
+
+
+    if echo "$STATUS" | grep -Eq "200|401|409"
+    then
+
+        echo "healthy"
+
+    else
+
+        echo "unhealthy"
+
+    fi
+
+
+    return
+
+fi
+
+
+
+############################################################
+# Health HTTP genérico
+############################################################
+
+if [ -n "$APP_HEALTH" ]; then
+
+
+    if curl -fs "$APP_HEALTH" >/dev/null 2>&1
+
+    then
+
+        echo "healthy"
+
+    else
+
+        echo "unhealthy"
+
+    fi
+
+
+    return
+
+fi
+
+
+echo "none"
 
 }
 
@@ -253,234 +335,6 @@ else
 
     echo
     echo "❌ Error instalando $APP_NAME"
-    return 1
-
-fi
-
-}
-
-
-app_update()
-{
-
-APP_PATH="$1"
-
-app_load "$APP_PATH" || return 1
-
-echo
-echo "🔄 Actualizando $APP_NAME"
-echo
-
-cd "$APP_DATA" || return 1
-
-docker compose -f "$APP_COMPOSE" pull || return 1
-
-docker compose -f "$APP_COMPOSE" up -d || return 1
-
-echo
-echo "✅ $APP_NAME actualizado"
-
-}
-
-
-app_restart()
-{
-
-APP_PATH="$1"
-
-app_load "$APP_PATH" || return 1
-
-echo
-echo "🔄 Reiniciando $APP_NAME"
-echo
-
-cd "$APP_DATA" || return 1
-
-docker compose -f "$APP_COMPOSE" restart || return 1
-
-echo
-echo "✅ $APP_NAME reiniciado"
-
-}
-
-
-app_logs()
-{
-
-APP_PATH="$1"
-
-app_load "$APP_PATH" || return 1
-
-echo
-echo "📜 Logs de $APP_NAME"
-echo
-
-cd "$APP_DATA" || return 1
-
-docker compose -f "$APP_COMPOSE" logs --tail=100
-
-}
-
-
-app_status()
-{
-
-APP_PATH="$1"
-
-app_load "$APP_PATH" || return 1
-
-
-echo
-echo "📦 $APP_NAME"
-echo
-
-
-[ -n "$APP_DESCRIPTION" ] && echo "Descripción: $APP_DESCRIPTION"
-
-[ -n "$APP_CATEGORY" ] && echo "Categoría: $APP_CATEGORY"
-
-
-if app_running
-then
-
-    echo "Estado: 🟢 Ejecutando"
-
-else
-
-    echo "Estado: 🔴 Detenido"
-
-fi
-
-
-echo "Versión: $APP_VERSION"
-echo "Imagen: $APP_IMAGE:$APP_TAG"
-echo "Contenedor: $(app_container)"
-
-[ -n "$APP_PORT" ] && echo "Puerto: $APP_PORT"
-
-REPORT_URL=$(app_report_url)
-
-[ -n "$REPORT_URL" ] && echo "URL: $REPORT_URL"
-
-
-HEALTH=$(app_health)
-
-
-if [ "$HEALTH" = "healthy" ]; then
-
-    echo "Health: 🟢 healthy"
-
-elif [ "$HEALTH" = "unhealthy" ]; then
-
-    echo "Health: 🔴 unhealthy"
-
-else
-
-    echo "Health: 🟡 Sin healthcheck"
-
-fi
-
-
-echo
-
-}
-
-
-app_check()
-{
-
-APP_PATH="$1"
-
-app_load "$APP_PATH" || return 1
-
-
-echo
-echo "🔎 Comprobación $APP_NAME"
-echo
-
-
-if [ -f "$APP_COMPOSE" ]; then
-
-    echo "Compose: 🟢 Encontrado"
-
-else
-
-    echo "Compose: 🔴 No encontrado"
-
-fi
-
-
-echo "Imagen: $APP_IMAGE:$APP_TAG"
-echo "Contenedor: $(app_container)"
-
-
-HEALTH=$(app_health)
-
-
-if [ "$HEALTH" = "healthy" ]; then
-
-    echo "Health: 🟢 healthy"
-
-elif [ "$HEALTH" = "unhealthy" ]; then
-
-    echo "Health: 🔴 unhealthy"
-
-else
-
-    if app_running; then
-
-        echo "Health: 🟡 Sin healthcheck"
-
-    else
-
-        echo "Health: 🔴 No disponible"
-
-    fi
-
-fi
-
-
-if app_running
-then
-
-    echo "Estado: 🟢 Ejecutando"
-
-else
-
-    echo "Estado: 🔴 Detenida"
-
-fi
-
-echo
-
-}
-
-
-app_remove()
-{
-
-APP_PATH="$1"
-
-app_load "$APP_PATH" || return 1
-
-echo
-echo "🗑️ Eliminando $APP_NAME"
-echo
-
-cd "$APP_DATA" || return 1
-
-docker compose -f "$APP_COMPOSE" down
-
-if [ $? -eq 0 ]; then
-
-    echo
-    echo "✅ $APP_NAME eliminado"
-
-else
-
-    echo
-    echo "❌ Error eliminando $APP_NAME"
-
     return 1
 
 fi
