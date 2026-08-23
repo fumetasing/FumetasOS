@@ -3,6 +3,14 @@
 
 # Changelog
 
+## v2.3.24
+
+### Fixed
+
+- Fixed CasaOS crash caused by invalid SMB connection state.
+- Improved stability after removing stale network mount references.
+- Prevented SMB client state from breaking FumetaOS service operation.
+
 ## v2.3.23
 
 ### Improved
