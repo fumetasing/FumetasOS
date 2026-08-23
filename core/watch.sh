@@ -12,6 +12,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/system.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/apps.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/events.sh"
 
+
 WATCH_STATE="$FUMETAOS_HOME/data/watch-state"
 
 mkdir -p "$WATCH_STATE"
@@ -27,7 +28,7 @@ state_get()
 FILE="$WATCH_STATE/$1"
 
 if [ -f "$FILE" ]; then
-cat "$FILE"
+    cat "$FILE"
 fi
 
 }
@@ -54,27 +55,48 @@ do
 
 if systemctl is-active --quiet "$SERVICE"
 then
+
     CURRENT="ok"
+
 else
+
     CURRENT="failed"
+
 fi
 
 
 OLD=$(state_get "service-$SERVICE")
 
 
-if [ "$CURRENT" != "$OLD" ]
+###########################################################
+# Servicio caído
+###########################################################
+
+if [ "$CURRENT" = "failed" ]
 then
 
-    if [ "$CURRENT" = "failed" ]
+    if [ "$OLD" = "failed" ]
     then
 
         event_error \
         "Servicio detenido" \
         "$SERVICE no está activo"
 
+    else
 
-    elif [ "$OLD" = "failed" ]
+        state_set "service-$SERVICE" "warning"
+
+    fi
+
+
+###########################################################
+# Servicio recuperado
+###########################################################
+
+elif [ "$CURRENT" = "ok" ]
+then
+
+    if [ "$OLD" = "failed" ] || [ "$OLD" = "warning" ]
     then
 
         event_recovery \
@@ -86,7 +108,12 @@ then
 fi
 
 
+###########################################################
+# Guardar estado
+###########################################################
+
 state_set "service-$SERVICE" "$CURRENT"
+
 
 done
 
