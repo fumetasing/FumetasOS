@@ -3,6 +3,20 @@
 
 # Changelog
 
+## v2.3.22
+
+### Added
+
+- Added application health monitoring.
+- Added Jellyfin health validation.
+- Added Transmission health validation.
+
+### Improved
+
+- Improved Telegram daily report formatting.
+- Fixed duplicated Telegram report header.
+- Improved application status reporting.
+
 ## v2.3.21
 
 ### Added
