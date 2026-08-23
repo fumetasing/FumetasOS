@@ -1,6 +1,20 @@
 # FumetaOS Changelog
 
 
+# Changelog
+
+## 2.3.21
+
+### Removed
+- Removed deprecated Time Capsule SMB integration.
+- Removed obsolete CIFS mounts and systemd automount units.
+- Removed old smbnetfs Docker integration.
+- Removed unused rclone Time Capsule remote.
+
+### Cleanup
+- Simplified storage mounting configuration.
+- Confirmed Samba only exposes local CasaOS shares.
+
 # 2.3.20
 
 ## Aplicaciones
