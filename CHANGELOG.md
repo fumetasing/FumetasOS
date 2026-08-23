@@ -1,6 +1,21 @@
 # FumetaOS Changelog
 
 
+# 2.3.20
+
+## Aplicaciones
+
+- Corregida integración de Jellyfin con CasaOS.
+- Migrada gestión de Jellyfin a instalación controlada por CasaOS.
+- Corregidos montajes persistentes de biblioteca multimedia.
+- Manteniendo configuración de usuario y datos mediante AppData.
+- Actualizado Jellyfin a versión 10.11.10.
+
+## Mantenimiento
+
+- Eliminadas configuraciones antiguas de Jellyfin que podían interferir con CasaOS.
+- Limpieza de definiciones duplicadas de aplicaciones.
+
 # 2.3.0
 
 ## Nuevas funciones
