@@ -3,17 +3,19 @@
 
 # Changelog
 
-## 2.3.21
+## v2.3.21
 
-### Removed
-- Removed deprecated Time Capsule SMB integration.
-- Removed obsolete CIFS mounts and systemd automount units.
-- Removed old smbnetfs Docker integration.
-- Removed unused rclone Time Capsule remote.
+### Added
 
-### Cleanup
-- Simplified storage mounting configuration.
-- Confirmed Samba only exposes local CasaOS shares.
+- Added application health monitoring.
+- Added Docker health detection.
+- Added custom health validation for Transmission.
+- Added Jellyfin health validation.
+
+### Improved
+
+- Application reports now show real service health state.
+- Jellyfin monitoring updated for CasaOS port mapping.
 
 # 2.3.20
 
