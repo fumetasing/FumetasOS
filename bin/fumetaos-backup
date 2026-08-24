@@ -1,8 +1,10 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Backup
+
 ###########################################################
 
 BACKUP_DIR="/mnt/datos/backups/fumetaos"
@@ -16,14 +18,12 @@ FILE="fumetaos-backup-$DATE.tar.gz"
 
 TEMP="/tmp/fumetaos-backup"
 
-
 echo
 echo "🖥️ FumetaOS Backup"
 echo
 
 echo "📦 Preparando copia..."
 echo
-
 
 rm -rf "$TEMP"
 mkdir -p "$TEMP"
@@ -59,11 +59,14 @@ cp /opt/fumetaos/VERSION "$TEMP/"
 
 echo
 
+
 mkdir -p "$BACKUP_DIR"
 
 
 if tar -czf "$BACKUP_DIR/$FILE" -C "$TEMP" .
 then
+
+    chown server:server "$BACKUP_DIR/$FILE"
 
     echo "💾 Backup creado:"
     echo
@@ -78,6 +81,7 @@ fi
 
 
 rm -rf "$TEMP"
+
 
 echo
 
@@ -94,9 +98,7 @@ echo
 echo "💾 Backups disponibles"
 echo
 
-
 ls -lh "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null
-
 
 echo
 
@@ -122,6 +124,7 @@ echo
 echo "🖥️ FumetaOS Backup Info"
 echo
 
+
 echo "📦 Último backup"
 echo
 
@@ -129,34 +132,45 @@ echo "$(basename "$BACKUP")"
 
 echo
 
+
 echo "📅 Fecha"
 date -r "$BACKUP" "+%Y-%m-%d %H:%M"
 
 echo
 
+
 echo "💾 Tamaño"
 du -h "$BACKUP" | awk '{print $1}'
 
+
 echo
+
 
 echo "🏷️ Versión"
 
 if [ -f /opt/fumetaos/VERSION ]; then
+
     cat /opt/fumetaos/VERSION
+
 else
+
     echo "Desconocida"
+
 fi
+
 
 echo
 
 echo "📁 Contenido"
 
+
 tar -tzf "$BACKUP" 2>/dev/null \
-| sed 's#^\./##' \
+| sed 's#^./##' \
 | cut -d/ -f1 \
 | grep -v '^$' \
 | sort -u \
 | while read ITEM
+
 do
 
     case "$ITEM" in
@@ -189,6 +203,7 @@ do
 
 done
 
+
 echo
 
 }
@@ -198,6 +213,7 @@ limpiar_backups()
 {
 
 KEEP=7
+
 
 echo
 echo "🧹 FumetaOS Backup Clean"
@@ -222,6 +238,7 @@ BORRAR=$((TOTAL-KEEP))
 
 
 ls -1t "$BACKUP_DIR"/fumetaos-backup-* | tail -n "$BORRAR" | while read FILE
+
 do
 
     echo "🗑️ Eliminando:"
@@ -265,6 +282,7 @@ echo "$BACKUP"
 
 echo
 
+
 read -p "¿Restaurar este backup? [s/N] " RESPUESTA
 
 
@@ -279,6 +297,7 @@ fi
 
 TEMP="/tmp/fumetaos-restore"
 
+
 rm -rf "$TEMP"
 mkdir -p "$TEMP"
 
@@ -288,6 +307,8 @@ tar -xzf "$BACKUP" -C "$TEMP"
 
 echo
 echo "🔄 Restaurando..."
+echo
+
 
 cp -r "$TEMP/config" /opt/fumetaos/
 cp -r "$TEMP/bin" /opt/fumetaos/
@@ -318,30 +339,36 @@ echo
 
 case "$1" in
 
+
 list)
 
     listar_backups
     ;;
+
 
 info)
 
     informacion_backup
     ;;
 
+
 clean)
 
     limpiar_backups
     ;;
+
 
 restore)
 
     restaurar_backup
     ;;
 
+
 "")
 
     crear_backup
     ;;
+
 
 *)
 
