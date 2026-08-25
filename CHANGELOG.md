@@ -3,6 +3,15 @@
 
 # Changelog
 
+## v2.3.25
+
+### Fixed
+
+- Fixed FumetaOS backup script error handling.
+- Fixed backup creation failure handling.
+- Improved backup file ownership consistency.
+- Backup files are now assigned to the `server` user and group.
+
 ## v2.3.24
 
 ### Fixed
