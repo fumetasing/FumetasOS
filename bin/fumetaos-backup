@@ -9,23 +9,34 @@ DAILY_KEEP=14
 WEEKLY_KEEP=8
 BIWEEKLY_KEEP=6
 MONTHLY_KEEP=12
-
 TEMP=""
 ARCHIVE=""
 
-cleanup_temp() {
+cleanup() {
     [ -n "$TEMP" ] && rm -rf "$TEMP"
     [ -n "$ARCHIVE" ] && rm -f "$ARCHIVE"
 }
-trap cleanup_temp EXIT
+trap cleanup EXIT
 
 prepare_dirs() {
     mkdir -p "$DATA_DIR" "$SYSTEM_DIR"
 }
 
-copy_source() {
-    TEMP=$(mktemp -d /tmp/fumetaos-backup.XXXXXX)
+latest_backup() {
+    find "$DATA_DIR" "$SYSTEM_DIR" -maxdepth 1 -type f \
+        -name "${PREFIX}*.tar.gz" -printf '%T@ %p\n' 2>/dev/null |
+        sort -nr | head -1 | cut -d' ' -f2-
+}
 
+create_backup() {
+    DATE=$(date +"%Y-%m-%d_%H-%M")
+    NAME="${PREFIX}${DATE}.tar.gz"
+    TEMP=$(mktemp -d /tmp/fumetaos-backup.XXXXXX)
+    ARCHIVE=$(mktemp /tmp/fumetaos-backup-archive.XXXXXX)
+
+    prepare_dirs
+
+    echo "📦 Preparando copia real de FumetaOS"
     cp -rL "$BASE/config" "$TEMP/"
     cp -rL "$BASE/bin" "$TEMP/"
     cp -rL "$BASE/core" "$TEMP/"
@@ -35,48 +46,33 @@ copy_source() {
     cp /etc/systemd/system/fumetaos-*.service "$TEMP/services/" 2>/dev/null || true
     cp /etc/systemd/system/fumetaos-*.timer "$TEMP/services/" 2>/dev/null || true
     cp -L "$BASE/VERSION" "$TEMP/"
-}
 
-create_backup() {
-    local date file data_file system_file data_sum system_sum
-
-    prepare_dirs
-    date=$(date +"%Y-%m-%d_%H-%M")
-    file="${PREFIX}${date}.tar.gz"
-    data_file="$DATA_DIR/$file"
-    system_file="$SYSTEM_DIR/$file"
-
-    echo "📦 Preparando copia real de FumetaOS"
-    copy_source
-
-    ARCHIVE=$(mktemp /tmp/fumetaos-backup-archive.XXXXXX)
     tar -czf "$ARCHIVE" -C "$TEMP" .
     gzip -t "$ARCHIVE"
 
-    install -m 0640 "$ARCHIVE" "$data_file"
-    install -m 0640 "$ARCHIVE" "$system_file"
+    install -m 0640 "$ARCHIVE" "$DATA_DIR/$NAME"
+    install -m 0640 "$ARCHIVE" "$SYSTEM_DIR/$NAME"
 
-    data_sum=$(sha256sum "$data_file" | awk '{print $1}')
-    system_sum=$(sha256sum "$system_file" | awk '{print $1}')
+    DATA_SUM=$(sha256sum "$DATA_DIR/$NAME" | awk '{print $1}')
+    SYSTEM_SUM=$(sha256sum "$SYSTEM_DIR/$NAME" | awk '{print $1}')
 
-    [ "$data_sum" = "$system_sum" ] ||
+    [ "$DATA_SUM" = "$SYSTEM_SUM" ] ||
         { echo "❌ Las dos copias no coinciden"; exit 20; }
 
     echo "✅ Copia creada y verificada:"
-    echo "   Datos:   $data_file"
-    echo "   Sistema: $system_file"
+    echo "$DATA_DIR/$NAME"
+    echo "$SYSTEM_DIR/$NAME"
 }
 
 retain() {
-    local dry_run="${1:-false}"
-    local name stamp epoch week biweek month
+    local dry="${1:-false}" name stamp week biweek month
     local -a files
     local daily=0 weekly=0 biweekly=0 monthly=0
-    declare -A keep seen_week seen_biweek seen_month
+    declare -A keep weeks biweeks months
 
     mapfile -t files < <(
         find "$DATA_DIR" -maxdepth 1 -type f -name "${PREFIX}*.tar.gz" \
-        -printf '%f\n' | sort -r
+            -printf '%f\n' | sort -r
     )
 
     for name in "${files[@]}"; do
@@ -90,18 +86,17 @@ retain() {
         [ -n "${keep[$name]:-}" ] && continue
         stamp=${name#"$PREFIX"}; stamp=${stamp%.tar.gz}
         week=$(date -d "${stamp/_/ }" +%G-W%V)
-        if [ -z "${seen_week[$week]:-}" ] && [ "$weekly" -lt "$WEEKLY_KEEP" ]; then
-            keep["$name"]=1; seen_week["$week"]=1; weekly=$((weekly + 1))
+        if [ -z "${weeks[$week]:-}" ] && [ "$weekly" -lt "$WEEKLY_KEEP" ]; then
+            keep["$name"]=1; weeks["$week"]=1; weekly=$((weekly + 1))
         fi
     done
 
     for name in "${files[@]}"; do
         [ -n "${keep[$name]:-}" ] && continue
         stamp=${name#"$PREFIX"}; stamp=${stamp%.tar.gz}
-        epoch=$(date -d "${stamp/_/ }" +%s)
-        biweek=$((epoch / 1209600))
-        if [ -z "${seen_biweek[$biweek]:-}" ] && [ "$biweekly" -lt "$BIWEEKLY_KEEP" ]; then
-            keep["$name"]=1; seen_biweek["$biweek"]=1; biweekly=$((biweekly + 1))
+        biweek=$(($(date -d "${stamp/_/ }" +%s) / 1209600))
+        if [ -z "${biweeks[$biweek]:-}" ] && [ "$biweekly" -lt "$BIWEEKLY_KEEP" ]; then
+            keep["$name"]=1; biweeks["$biweek"]=1; biweekly=$((biweekly + 1))
         fi
     done
 
@@ -109,15 +104,15 @@ retain() {
         [ -n "${keep[$name]:-}" ] && continue
         stamp=${name#"$PREFIX"}; stamp=${stamp%.tar.gz}
         month=$(date -d "${stamp/_/ }" +%Y-%m)
-        if [ -z "${seen_month[$month]:-}" ] && [ "$monthly" -lt "$MONTHLY_KEEP" ]; then
-            keep["$name"]=1; seen_month["$month"]=1; monthly=$((monthly + 1))
+        if [ -z "${months[$month]:-}" ] && [ "$monthly" -lt "$MONTHLY_KEEP" ]; then
+            keep["$name"]=1; months["$month"]=1; monthly=$((monthly + 1))
         fi
     done
 
     for name in "${files[@]}"; do
         [ -n "${keep[$name]:-}" ] && continue
-        if [ "$dry_run" = true ]; then
-            echo "SIMULACIÓN: eliminar $name de ambas ubicaciones"
+        if [ "$dry" = true ]; then
+            echo "SIMULACIÓN: eliminar $name"
         else
             rm -f "$DATA_DIR/$name" "$SYSTEM_DIR/$name"
             echo "🗑️ Eliminada: $name"
@@ -126,16 +121,56 @@ retain() {
 }
 
 list_backups() {
+    echo "===== Datos ====="
     ls -lh "$DATA_DIR"/"${PREFIX}"*.tar.gz 2>/dev/null || true
+    echo "===== Sistema ====="
+    ls -lh "$SYSTEM_DIR"/"${PREFIX}"*.tar.gz 2>/dev/null || true
+}
+
+info_backup() {
+    BACKUP=$(latest_backup)
+    [ -n "$BACKUP" ] || { echo "❌ No hay backups"; exit 20; }
+
+    echo "📦 Último backup: $BACKUP"
+    echo "💾 Tamaño: $(du -h "$BACKUP" | awk '{print $1}')"
+    echo "🏷️ Versión:"
+    tar -xOzf "$BACKUP" ./VERSION
+    echo
+    echo "📁 Contenido:"
+    tar -tzf "$BACKUP" | sed 's#^./##' | cut -d/ -f1 | grep -v '^$' | sort -u
+}
+
+restore_backup() {
+    BACKUP=$(latest_backup)
+    [ -n "$BACKUP" ] || { echo "❌ No hay backups"; exit 20; }
+
+    echo "⚠️ Se restaurará: $BACKUP"
+    read -r -p "¿Continuar? [s/N] " ANSWER
+    [ "$ANSWER" = "s" ] || [ "$ANSWER" = "S" ] || exit 0
+
+    TEMP=$(mktemp -d /tmp/fumetaos-restore.XXXXXX)
+    tar -xzf "$BACKUP" -C "$TEMP"
+
+    sudo cp -r "$TEMP/config/." "$BASE/config/"
+    sudo cp -r "$TEMP/bin/." "$BASE/bin/"
+    sudo cp -r "$TEMP/core/." "$BASE/core/"
+    sudo cp -r "$TEMP/modules/." "$BASE/modules/"
+    sudo cp "$TEMP/VERSION" "$BASE/VERSION"
+    sudo cp "$TEMP/services/"* /etc/systemd/system/ 2>/dev/null || true
+    sudo systemctl daemon-reload
+
+    echo "✅ Restauración completada"
 }
 
 case "${1:-}" in
     "") create_backup ;;
+    list) list_backups ;;
+    info) info_backup ;;
     clean) retain false ;;
     clean-dry-run) retain true ;;
-    list) list_backups ;;
+    restore) restore_backup ;;
     *)
-        echo "Uso: fumetaos backup [clean|clean-dry-run|list]"
+        echo "Uso: fumetaos backup [list|info|clean|clean-dry-run|restore]"
         exit 1
         ;;
 esac
