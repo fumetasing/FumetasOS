@@ -4,4 +4,5 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+User=server
 ExecStart=/opt/fumetaos/bin/fumetaos-report

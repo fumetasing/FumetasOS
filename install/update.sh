@@ -58,6 +58,7 @@ bin core modules config VERSION
 
 
 if [ $? -eq 0 ]; then
+    chown server:server "$FILE"
 
     echo "✅ Backup creado:"
     echo "$FILE"
