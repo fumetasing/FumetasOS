@@ -1,387 +1,141 @@
 #!/bin/bash
+set -euo pipefail
 
-###########################################################
+DATA_DIR="/mnt/datos/backups/fumetaos"
+SYSTEM_DIR="/var/backups/fumetaos"
+BASE="/opt/fumetaos"
+PREFIX="fumetaos-backup-"
+DAILY_KEEP=14
+WEEKLY_KEEP=8
+BIWEEKLY_KEEP=6
+MONTHLY_KEEP=12
 
-# FumetaOS
-# Backup
+TEMP=""
+ARCHIVE=""
 
-###########################################################
+cleanup_temp() {
+    [ -n "$TEMP" ] && rm -rf "$TEMP"
+    [ -n "$ARCHIVE" ] && rm -f "$ARCHIVE"
+}
+trap cleanup_temp EXIT
 
-BACKUP_DIR="/mnt/datos/backups/fumetaos"
-
-
-crear_backup()
-{
-
-DATE=$(date +"%Y-%m-%d_%H-%M")
-FILE="fumetaos-backup-$DATE.tar.gz"
-
-TEMP="/tmp/fumetaos-backup"
-
-echo
-echo "🖥️ FumetaOS Backup"
-echo
-
-echo "📦 Preparando copia..."
-echo
-
-rm -rf "$TEMP"
-mkdir -p "$TEMP"
-
-
-echo "✅ Configuración"
-cp -r /opt/fumetaos/config "$TEMP/"
-
-
-echo "✅ Scripts"
-cp -r /opt/fumetaos/bin "$TEMP/"
-
-
-echo "✅ Core"
-cp -r /opt/fumetaos/core "$TEMP/"
-
-
-echo "✅ Módulos"
-cp -r /opt/fumetaos/modules "$TEMP/"
-
-
-echo "✅ Servicios"
-
-mkdir -p "$TEMP/services"
-
-cp /etc/systemd/system/fumetaos-*.service "$TEMP/services/" 2>/dev/null
-cp /etc/systemd/system/fumetaos-*.timer "$TEMP/services/" 2>/dev/null
-
-
-echo "✅ Versión"
-cp /opt/fumetaos/VERSION "$TEMP/"
-
-
-echo
-
-
-mkdir -p "$BACKUP_DIR"
-
-
-if tar -czf "$BACKUP_DIR/$FILE" -C "$TEMP" .
-then
-
-    chown server:server "$BACKUP_DIR/$FILE"
-
-    echo "💾 Backup creado:"
-    echo
-    echo "$BACKUP_DIR/$FILE"
-
-else
-
-    echo "🔴 Error creando backup"
-    exit 20
-
-fi
-
-
-rm -rf "$TEMP"
-
-
-echo
-
+prepare_dirs() {
+    mkdir -p "$DATA_DIR" "$SYSTEM_DIR"
 }
 
+copy_source() {
+    TEMP=$(mktemp -d /tmp/fumetaos-backup.XXXXXX)
 
-listar_backups()
-{
+    cp -rL "$BASE/config" "$TEMP/"
+    cp -rL "$BASE/bin" "$TEMP/"
+    cp -rL "$BASE/core" "$TEMP/"
+    cp -rL "$BASE/modules" "$TEMP/"
 
-echo
-echo "🖥️ FumetaOS Backup"
-echo
-
-echo "💾 Backups disponibles"
-echo
-
-ls -lh "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null
-
-echo
-
+    mkdir -p "$TEMP/services"
+    cp /etc/systemd/system/fumetaos-*.service "$TEMP/services/" 2>/dev/null || true
+    cp /etc/systemd/system/fumetaos-*.timer "$TEMP/services/" 2>/dev/null || true
+    cp -L "$BASE/VERSION" "$TEMP/"
 }
 
+create_backup() {
+    local date file data_file system_file data_sum system_sum
 
-informacion_backup()
-{
+    prepare_dirs
+    date=$(date +"%Y-%m-%d_%H-%M")
+    file="${PREFIX}${date}.tar.gz"
+    data_file="$DATA_DIR/$file"
+    system_file="$SYSTEM_DIR/$file"
 
-BACKUP=$(ls -1t "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null | head -n 1)
+    echo "📦 Preparando copia real de FumetaOS"
+    copy_source
 
+    ARCHIVE=$(mktemp /tmp/fumetaos-backup-archive.XXXXXX)
+    tar -czf "$ARCHIVE" -C "$TEMP" .
+    gzip -t "$ARCHIVE"
 
-if [ -z "$BACKUP" ]; then
+    install -m 0640 "$ARCHIVE" "$data_file"
+    install -m 0640 "$ARCHIVE" "$system_file"
 
-    echo
-    echo "🔴 No hay backups disponibles"
-    exit 20
+    data_sum=$(sha256sum "$data_file" | awk '{print $1}')
+    system_sum=$(sha256sum "$system_file" | awk '{print $1}')
 
-fi
+    [ "$data_sum" = "$system_sum" ] ||
+        { echo "❌ Las dos copias no coinciden"; exit 20; }
 
-
-echo
-echo "🖥️ FumetaOS Backup Info"
-echo
-
-
-echo "📦 Último backup"
-echo
-
-echo "$(basename "$BACKUP")"
-
-echo
-
-
-echo "📅 Fecha"
-date -r "$BACKUP" "+%Y-%m-%d %H:%M"
-
-echo
-
-
-echo "💾 Tamaño"
-du -h "$BACKUP" | awk '{print $1}'
-
-
-echo
-
-
-echo "🏷️ Versión"
-
-if [ -f /opt/fumetaos/VERSION ]; then
-
-    cat /opt/fumetaos/VERSION
-
-else
-
-    echo "Desconocida"
-
-fi
-
-
-echo
-
-echo "📁 Contenido"
-
-
-tar -tzf "$BACKUP" 2>/dev/null \
-| sed 's#^./##' \
-| cut -d/ -f1 \
-| grep -v '^$' \
-| sort -u \
-| while read ITEM
-
-do
-
-    case "$ITEM" in
-
-        bin)
-            echo "✅ Scripts"
-            ;;
-
-        config)
-            echo "✅ Configuración"
-            ;;
-
-        core)
-            echo "✅ Core"
-            ;;
-
-        modules)
-            echo "✅ Módulos"
-            ;;
-
-        services)
-            echo "✅ Servicios"
-            ;;
-
-        VERSION)
-            echo "✅ Versión"
-            ;;
-
-    esac
-
-done
-
-
-echo
-
+    echo "✅ Copia creada y verificada:"
+    echo "   Datos:   $data_file"
+    echo "   Sistema: $system_file"
 }
 
+retain() {
+    local dry_run="${1:-false}"
+    local name stamp epoch week biweek month
+    local -a files
+    local daily=0 weekly=0 biweekly=0 monthly=0
+    declare -A keep seen_week seen_biweek seen_month
 
-limpiar_backups()
-{
+    mapfile -t files < <(
+        find "$DATA_DIR" -maxdepth 1 -type f -name "${PREFIX}*.tar.gz" \
+        -printf '%f\n' | sort -r
+    )
 
-KEEP=7
+    for name in "${files[@]}"; do
+        if [ "$daily" -lt "$DAILY_KEEP" ]; then
+            keep["$name"]=1
+            daily=$((daily + 1))
+        fi
+    done
 
+    for name in "${files[@]}"; do
+        [ -n "${keep[$name]:-}" ] && continue
+        stamp=${name#"$PREFIX"}; stamp=${stamp%.tar.gz}
+        week=$(date -d "${stamp/_/ }" +%G-W%V)
+        if [ -z "${seen_week[$week]:-}" ] && [ "$weekly" -lt "$WEEKLY_KEEP" ]; then
+            keep["$name"]=1; seen_week["$week"]=1; weekly=$((weekly + 1))
+        fi
+    done
 
-echo
-echo "🧹 FumetaOS Backup Clean"
-echo
+    for name in "${files[@]}"; do
+        [ -n "${keep[$name]:-}" ] && continue
+        stamp=${name#"$PREFIX"}; stamp=${stamp%.tar.gz}
+        epoch=$(date -d "${stamp/_/ }" +%s)
+        biweek=$((epoch / 1209600))
+        if [ -z "${seen_biweek[$biweek]:-}" ] && [ "$biweekly" -lt "$BIWEEKLY_KEEP" ]; then
+            keep["$name"]=1; seen_biweek["$biweek"]=1; biweekly=$((biweekly + 1))
+        fi
+    done
 
-echo "Manteniendo últimos $KEEP backups"
-echo
+    for name in "${files[@]}"; do
+        [ -n "${keep[$name]:-}" ] && continue
+        stamp=${name#"$PREFIX"}; stamp=${stamp%.tar.gz}
+        month=$(date -d "${stamp/_/ }" +%Y-%m)
+        if [ -z "${seen_month[$month]:-}" ] && [ "$monthly" -lt "$MONTHLY_KEEP" ]; then
+            keep["$name"]=1; seen_month["$month"]=1; monthly=$((monthly + 1))
+        fi
+    done
 
-
-TOTAL=$(ls "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null | wc -l)
-
-
-if [ "$TOTAL" -le "$KEEP" ]; then
-
-    echo "✅ No hay backups antiguos que limpiar"
-    exit 0
-
-fi
-
-
-BORRAR=$((TOTAL-KEEP))
-
-
-ls -1t "$BACKUP_DIR"/fumetaos-backup-* | tail -n "$BORRAR" | while read FILE
-
-do
-
-    echo "🗑️ Eliminando:"
-    echo "$(basename "$FILE")"
-
-    rm -f "$FILE"
-
-done
-
-
-echo
-echo "✅ Limpieza completada"
-echo
-
+    for name in "${files[@]}"; do
+        [ -n "${keep[$name]:-}" ] && continue
+        if [ "$dry_run" = true ]; then
+            echo "SIMULACIÓN: eliminar $name de ambas ubicaciones"
+        else
+            rm -f "$DATA_DIR/$name" "$SYSTEM_DIR/$name"
+            echo "🗑️ Eliminada: $name"
+        fi
+    done
 }
 
-
-restaurar_backup()
-{
-
-BACKUP=$(ls -1t "$BACKUP_DIR"/fumetaos-backup-* 2>/dev/null | head -n 1)
-
-
-if [ -z "$BACKUP" ]; then
-
-    echo
-    echo "🔴 No hay backups disponibles"
-    exit 20
-
-fi
-
-
-echo
-echo "🖥️ FumetaOS Restore"
-echo
-
-echo "Backup seleccionado:"
-echo
-
-echo "$BACKUP"
-
-echo
-
-
-read -p "¿Restaurar este backup? [s/N] " RESPUESTA
-
-
-if [ "$RESPUESTA" != "s" ] && [ "$RESPUESTA" != "S" ]; then
-
-    echo
-    echo "❌ Restauración cancelada"
-    exit 0
-
-fi
-
-
-TEMP="/tmp/fumetaos-restore"
-
-
-rm -rf "$TEMP"
-mkdir -p "$TEMP"
-
-
-tar -xzf "$BACKUP" -C "$TEMP"
-
-
-echo
-echo "🔄 Restaurando..."
-echo
-
-
-cp -r "$TEMP/config" /opt/fumetaos/
-cp -r "$TEMP/bin" /opt/fumetaos/
-cp -r "$TEMP/core" /opt/fumetaos/
-cp -r "$TEMP/modules" /opt/fumetaos/
-cp "$TEMP/VERSION" /opt/fumetaos/
-
-
-if [ -d "$TEMP/services" ]; then
-
-    cp "$TEMP/services/"* /etc/systemd/system/ 2>/dev/null
-
-fi
-
-
-systemctl daemon-reload
-
-
-rm -rf "$TEMP"
-
-
-echo
-echo "✅ Restauración completada"
-echo
-
+list_backups() {
+    ls -lh "$DATA_DIR"/"${PREFIX}"*.tar.gz 2>/dev/null || true
 }
 
-
-case "$1" in
-
-
-list)
-
-    listar_backups
-    ;;
-
-
-info)
-
-    informacion_backup
-    ;;
-
-
-clean)
-
-    limpiar_backups
-    ;;
-
-
-restore)
-
-    restaurar_backup
-    ;;
-
-
-"")
-
-    crear_backup
-    ;;
-
-
-*)
-
-    echo
-    echo "Uso:"
-    echo
-    echo "fumetaos backup"
-    echo "fumetaos backup list"
-    echo "fumetaos backup info"
-    echo "fumetaos backup clean"
-    echo "fumetaos backup restore"
-    echo
-
-    ;;
-
+case "${1:-}" in
+    "") create_backup ;;
+    clean) retain false ;;
+    clean-dry-run) retain true ;;
+    list) list_backups ;;
+    *)
+        echo "Uso: fumetaos backup [clean|clean-dry-run|list]"
+        exit 1
+        ;;
 esac
