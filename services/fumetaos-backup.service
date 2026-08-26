@@ -1,0 +1,8 @@
+[Unit]
+Description=Backup automático de FumetaOS
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=server
+ExecStart=/bin/bash -c '/opt/fumetaos/bin/fumetaos backup && /opt/fumetaos/bin/fumetaos backup clean'

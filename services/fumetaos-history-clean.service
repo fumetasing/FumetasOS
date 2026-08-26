@@ -1,0 +1,7 @@
+[Unit]
+Description=Limpieza del histórico de FumetaOS
+
+[Service]
+Type=oneshot
+User=server
+ExecStart=/opt/fumetaos/bin/fumetaos-history clean

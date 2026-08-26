@@ -1,0 +1,7 @@
+[Unit]
+Description=Informe diario de FumetaOS
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fumetaos/bin/fumetaos-report
