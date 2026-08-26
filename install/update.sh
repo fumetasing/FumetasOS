@@ -74,6 +74,33 @@ fi
 
 
 
+actualizar_directorio()
+{
+
+SOURCE_DIR="$1"
+DEST_DIR="$2"
+LABEL="$3"
+
+echo "📦 Actualizando $LABEL"
+
+if [ -L "$DEST_DIR" ]; then
+
+    echo "ℹ️ Se conserva el enlace simbólico: $DEST_DIR -> $(readlink -f "$DEST_DIR")"
+    return 0
+
+fi
+
+rm -rf "$DEST_DIR"
+
+if ! cp -r "$SOURCE_DIR" "$(dirname "$DEST_DIR")/"; then
+
+    echo "❌ Error actualizando $LABEL"
+    exit 20
+
+fi
+
+}
+
 actualizar()
 {
 
@@ -102,16 +129,13 @@ crear_backup
 
 
 
-echo "📦 Actualizando binarios"
-cp -r "$PACKAGE/bin" "$BASE/"
+actualizar_directorio "$PACKAGE/bin" "$BASE/bin" "binarios"
 
 
-echo "📦 Actualizando core"
-cp -r "$PACKAGE/core" "$BASE/"
+actualizar_directorio "$PACKAGE/core" "$BASE/core" "core"
 
 
-echo "📦 Actualizando módulos"
-cp -r "$PACKAGE/modules" "$BASE/"
+actualizar_directorio "$PACKAGE/modules" "$BASE/modules" "módulos"
 
 
 echo "⚙️ Actualizando servicios"
