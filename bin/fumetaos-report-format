@@ -1,87 +1,117 @@
 #!/bin/bash
 
-############################################################
-
+###########################################################
 # FumetaOS
-
 # Daily Report Formatter
-
-############################################################
-
+###########################################################
 
 SEPARATOR="━━━━━━━━━━━━━━━━"
 
 
-FIRST_LINE=1
+echo "🖥️ FumetaOS DAILY REPORT"
+echo "$SEPARATOR"
 
 
 while IFS= read -r LINE
 do
 
+    case "$LINE" in
 
-case "$LINE" in
 
-
-"🖥️ FumetaOS DAILY REPORT")
-
-    if [ "$FIRST_LINE" -eq 1 ]; then
+    "🖥️ FumetaOS v"*)
 
         echo "$LINE"
-        FIRST_LINE=0
+        echo
 
-    fi
-
-    ;;
+        ;;
 
 
-"━━━━━━━━━━━━━━━━")
+    "🖥️ Sistema")
 
-    echo "$LINE"
+        echo "$LINE"
+        echo
 
-    ;;
-
-
-"🖥️ FumetaOS v"*)
-
-    echo
-    echo "$LINE"
-    echo
-
-    ;;
+        ;;
 
 
-"🛠️ Servicios"|"🔒 Seguridad"|"⏱️ Timers FumetaOS"|"💚 SMART"|"💾 Discos"|"🌡️ Temperatura"|"🧠 Memoria"|"📦 Aplicaciones"|"📦 Actualizaciones")
+    "🛠️ Servicios")
 
-    echo
-    echo "$SEPARATOR"
-    echo "$LINE"
+        echo "$SEPARATOR"
+        echo "$LINE"
 
-    ;;
-
-
-"🟢 Estado general:"*)
-
-    echo
-    echo "$SEPARATOR"
-    echo
-    echo "$LINE"
-
-    ;;
+        ;;
 
 
-"")
+    "💚 SMART")
 
-    ;;
+        echo "$SEPARATOR"
+        echo "$LINE"
 
-
-*)
-
-    echo "$LINE"
-
-    ;;
+        ;;
 
 
-esac
+    "💾 Discos")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "🌡️ Temperatura")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "🧠 Memoria")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "📦 Aplicaciones")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "📦 Actualizaciones")
+
+        echo "$SEPARATOR"
+        echo "$LINE"
+
+        ;;
+
+
+    "🟢 Estado general:"*)
+
+        echo "$SEPARATOR"
+        echo
+        echo "$LINE"
+
+        ;;
+
+
+    "")
+
+        ;;
+
+
+    *)
+
+        echo "$LINE"
+
+        ;;
+
+
+    esac
 
 
 done
