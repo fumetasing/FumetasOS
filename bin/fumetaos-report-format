@@ -13,72 +13,89 @@ echo "$SEPARATOR"
 while IFS= read -r LINE
 do
     case "$LINE" in
-    "🖥️ FumetaOS v"*)
-        echo "$LINE"
-        echo
-        ;;
+        "🖥️ FumetaOS v"*)
+            echo "$LINE"
+            echo
+            ;;
 
-    "🖥️ Sistema")
-        echo "$LINE"
-        echo
-        ;;
+        "🖥️ Sistema")
+            echo "$LINE"
+            echo
+            ;;
 
-    "🛠️ Servicios")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "🛠️ Servicios")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "🔒 Seguridad")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "🔒 Seguridad")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "⏱️ Timers FumetaOS")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "⏱️ Timers FumetaOS")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "💚 SMART")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "💾 Copias de seguridad")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "💾 Discos")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "💚 SMART")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "🌡️ Temperatura")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "💾 Discos")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "🧠 Memoria")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "🌡️ Temperatura")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "📦 Aplicaciones")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "🧠 Memoria")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "📦 Actualizaciones")
-        echo "$SEPARATOR"
-        echo "$LINE"
-        ;;
+        "📦 Aplicaciones")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "🟢 Estado general:"*)
-        echo "$SEPARATOR"
-        echo
-        echo "$LINE"
-        ;;
+        "📦 Actualizaciones")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
 
-    "")
-        ;;
+        "🟢 Estado general:"*)
+            echo "$SEPARATOR"
+            echo
+            echo "$LINE"
+            ;;
 
-    *)
-        echo "$LINE"
-        ;;
+        "🟡 Estado general:"*)
+            echo "$SEPARATOR"
+            echo
+            echo "$LINE"
+            ;;
+
+        "🔴 Estado general:"*)
+            echo "$SEPARATOR"
+            echo
+            echo "$LINE"
+            ;;
+
+        "")
+            ;;
+
+        *)
+            echo "$LINE"
+            ;;
     esac
 done
