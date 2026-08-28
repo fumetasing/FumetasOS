@@ -16,6 +16,7 @@ fumetaos-report.timer
 fumetaos-backup.timer
 fumetaos-mac-backup.timer
 fumetaos-recovery-backup.timer
+fumetaos-system-upgrade.timer
 "
 
 leer_version()

@@ -6,8 +6,7 @@ RequiresMountsFor=/mnt/datos
 
 [Service]
 Type=oneshot
-User=server
-Group=server
+User=root
 Nice=19
 IOSchedulingClass=idle
 TimeoutStartSec=12h

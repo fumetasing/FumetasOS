@@ -1,0 +1,13 @@
+[Unit]
+Description=Actualización semanal completa de Ubuntu
+After=network-online.target apt-daily.service apt-daily-upgrade.service fumetaos-recovery-backup.service
+Wants=network-online.target
+RequiresMountsFor=/mnt/datos
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=4h
+ExecStart=/opt/fumetaos/bin/fumetaos-system-upgrade

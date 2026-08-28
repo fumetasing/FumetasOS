@@ -1,0 +1,10 @@
+[Unit]
+Description=Ejecutar actualización semanal completa de Ubuntu
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
