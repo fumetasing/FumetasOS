@@ -1,0 +1,210 @@
+#!/bin/bash
+
+set -euo pipefail
+
+REPOSITORY="/mnt/datos/backups/fumetaos/recovery-repo"
+PASSWORD_FILE="/etc/fumetaos/restic-password"
+CACHE_DIR="/var/cache/fumetaos-restic"
+METADATA_DIR="/var/lib/fumetaos/recovery-metadata"
+LOCK_FILE="/run/lock/fumetaos-recovery-backup.lock"
+
+RUNNING_CONTAINERS=()
+CASAOS_WAS_ACTIVE=0
+SERVICES_STOPPED=0
+
+mostrar_error()
+{
+    echo "❌ $1"
+    exit 20
+}
+
+restic_cmd()
+{
+    restic \
+        --repo "$REPOSITORY" \
+        --password-file "$PASSWORD_FILE" \
+        --cache-dir "$CACHE_DIR" \
+        "$@"
+}
+
+restaurar_servicios()
+{
+    if [ "$SERVICES_STOPPED" -ne 1 ]; then
+        return 0
+    fi
+
+    if [ "$CASAOS_WAS_ACTIVE" -eq 1 ]; then
+        systemctl start casaos 2>/dev/null || true
+    fi
+
+    if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
+        docker start "${RUNNING_CONTAINERS[@]}" >/dev/null 2>&1 || true
+    fi
+
+    SERVICES_STOPPED=0
+}
+
+limpiar()
+{
+    restaurar_servicios
+}
+
+parar_servicios()
+{
+    command -v docker >/dev/null 2>&1 ||
+        mostrar_error "Docker no está disponible"
+
+    mapfile -t RUNNING_CONTAINERS < <(
+        docker ps --format '{{.Names}}'
+    )
+
+    SERVICES_STOPPED=1
+
+    if systemctl is-active --quiet casaos; then
+        CASAOS_WAS_ACTIVE=1
+        systemctl stop casaos
+    fi
+
+    if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
+        docker stop "${RUNNING_CONTAINERS[@]}"
+    fi
+}
+
+crear_metadatos()
+{
+    install -d -o root -g root -m 0700 \
+        "$CACHE_DIR" \
+        "$METADATA_DIR"
+
+    date --iso-8601=seconds > "$METADATA_DIR/created-at.txt"
+    hostnamectl > "$METADATA_DIR/hostnamectl.txt"
+    lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS > "$METADATA_DIR/lsblk.txt"
+    findmnt > "$METADATA_DIR/findmnt.txt"
+
+    dpkg-query -W -f='${binary:Package}\t${Version}\n' \
+        | sort > "$METADATA_DIR/packages.tsv"
+
+    apt-mark showmanual \
+        | sort > "$METADATA_DIR/manual-packages.txt"
+
+    systemctl list-unit-files \
+        | sort > "$METADATA_DIR/systemd-unit-files.txt"
+
+    docker ps -a > "$METADATA_DIR/docker-containers.txt"
+    docker image ls --digests > "$METADATA_DIR/docker-images.txt"
+    docker network ls > "$METADATA_DIR/docker-networks.txt"
+    docker volume ls > "$METADATA_DIR/docker-volumes.txt"
+
+    docker ps -aq \
+        | xargs -r docker inspect \
+        > "$METADATA_DIR/docker-inspect.json" \
+        2>/dev/null || true
+
+    printf '%s\n' "${RUNNING_CONTAINERS[@]}" \
+        > "$METADATA_DIR/docker-running-containers.txt"
+}
+
+crear_backup()
+{
+    local sources
+
+    [ -f "$PASSWORD_FILE" ] ||
+        mostrar_error "No existe el archivo de contraseña de Restic"
+
+    mountpoint -q /mnt/datos ||
+        mostrar_error "/mnt/datos no está montado"
+
+    command -v restic >/dev/null 2>&1 ||
+        mostrar_error "Restic no está instalado"
+
+    trap limpiar EXIT
+
+    echo "💾 Preparando copia de recuperación del servidor"
+    echo "⏸️ Deteniendo temporalmente CasaOS y las aplicaciones"
+
+    parar_servicios
+    crear_metadatos
+
+    sources=(
+        /etc
+        /home/server
+        /root
+        /DATA
+        /opt/fumetaos
+        /usr/local
+        /var/lib/casaos
+        "$METADATA_DIR"
+    )
+
+    if [ -d /var/spool/cron ]; then
+        sources+=(/var/spool/cron)
+    fi
+
+    echo "📦 Guardando configuración, credenciales y datos de aplicaciones"
+
+    restic_cmd backup \
+        --tag fumetaos-recovery \
+        --host server \
+        "${sources[@]}"
+
+    echo "🧹 Aplicando retención"
+
+    restic_cmd forget \
+        --prune \
+        --tag fumetaos-recovery \
+        --keep-daily 14 \
+        --keep-weekly 8 \
+        --keep-monthly 12
+
+    restaurar_servicios
+    trap - EXIT
+
+    echo "✅ Copia de recuperación completada"
+}
+
+listar_backups()
+{
+    restic_cmd snapshots --tag fumetaos-recovery
+}
+
+verificar_backups()
+{
+    restic_cmd snapshots --tag fumetaos-recovery
+    restic_cmd check
+}
+
+estadisticas()
+{
+    restic_cmd stats --tag fumetaos-recovery
+}
+
+[ "$(id -u)" -eq 0 ] ||
+    mostrar_error "Este backup debe ejecutarse como root"
+
+exec 9>"$LOCK_FILE"
+
+flock -n 9 ||
+    mostrar_error "Ya hay una copia de recuperación en curso"
+
+case "${1:-create}" in
+    create)
+        crear_backup
+        ;;
+    list)
+        listar_backups
+        ;;
+    verify)
+        verificar_backups
+        ;;
+    stats)
+        estadisticas
+        ;;
+    *)
+        echo "Uso:"
+        echo "fumetaos-recovery-backup create"
+        echo "fumetaos-recovery-backup list"
+        echo "fumetaos-recovery-backup verify"
+        echo "fumetaos-recovery-backup stats"
+        exit 20
+        ;;
+esac

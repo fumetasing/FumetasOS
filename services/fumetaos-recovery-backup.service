@@ -1,0 +1,13 @@
+[Unit]
+Description=Copia incremental de recuperación completa de FumetaOS
+After=network-online.target docker.service casaos.service
+Wants=network-online.target
+RequiresMountsFor=/mnt/datos
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=2h
+ExecStart=/opt/fumetaos/bin/fumetaos-recovery-backup create

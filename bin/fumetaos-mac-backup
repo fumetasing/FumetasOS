@@ -1,0 +1,90 @@
+#!/bin/bash
+
+set -euo pipefail
+
+SOURCE_DIR="/mnt/datos/"
+MAC_USER="fumetasing"
+MAC_HOST="192.168.1.5"
+MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server"
+SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
+LOCK_FILE="/home/server/.cache/fumetaos-mac-backup.lock"
+
+DRY_RUN=()
+
+mostrar_error()
+{
+    echo "❌ $1"
+    exit 20
+}
+
+case "${1:-}" in
+    "")
+        ;;
+    --dry-run)
+        DRY_RUN=(--dry-run)
+        ;;
+    *)
+        echo "Uso:"
+        echo "fumetaos-mac-backup"
+        echo "fumetaos-mac-backup --dry-run"
+        exit 20
+        ;;
+esac
+
+[ -d "$SOURCE_DIR" ] ||
+    mostrar_error "No existe el origen: $SOURCE_DIR"
+
+mountpoint -q /mnt/datos ||
+    mostrar_error "/mnt/datos no está montado"
+
+[ -r "$SSH_KEY" ] ||
+    mostrar_error "No existe la clave SSH: $SSH_KEY"
+
+mkdir -p /home/server/.cache
+
+exec 9>"$LOCK_FILE"
+
+flock -n 9 ||
+    mostrar_error "Ya hay una copia al Mac en curso"
+
+SSH_COMMAND=(
+    ssh
+    -i "$SSH_KEY"
+    -o BatchMode=yes
+    -o ConnectTimeout=20
+    -o ServerAliveInterval=30
+    -o ServerAliveCountMax=6
+)
+
+echo "💾 Copia espejo de /mnt/datos al Mac"
+echo "📍 Destino: $MAC_DESTINATION"
+echo
+
+"${SSH_COMMAND[@]}" \
+    "$MAC_USER@$MAC_HOST" \
+    "test -d $MAC_DESTINATION" ||
+    mostrar_error "El Mac o el disco USB no están disponibles"
+
+RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"
+
+rsync \
+    -aH \
+    --no-owner \
+    --no-group \
+    --delete-delay \
+    --partial \
+    --human-readable \
+    --stats \
+    --exclude='/lost+found/' \
+    "${DRY_RUN[@]}" \
+    -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6" \
+    "$SOURCE_DIR" \
+    "$RSYNC_DESTINATION"
+
+if [ "${#DRY_RUN[@]}" -gt 0 ]; then
+    echo
+    echo "✅ Simulación completada: no se ha copiado ni borrado nada"
+else
+    echo
+    echo "✅ Copia espejo completada"
+fi

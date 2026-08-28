@@ -1,0 +1,14 @@
+[Unit]
+Description=Copia espejo diaria de datos FumetaOS al Mac
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/datos
+
+[Service]
+Type=oneshot
+User=server
+Group=server
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=12h
+ExecStart=/opt/fumetaos/bin/fumetaos-mac-backup

@@ -1,0 +1,10 @@
+[Unit]
+Description=Ejecutar la copia espejo de FumetaOS al Mac a las 02:00
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
