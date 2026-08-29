@@ -1,0 +1,16 @@
+[Unit]
+Description=Montaje AFP de la Time Capsule para CasaOS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+TimeoutStartSec=90s
+TimeoutStopSec=30s
+ExecStart=/opt/fumetaos/bin/fumetaos-timecapsule mount
+ExecStop=/opt/fumetaos/bin/fumetaos-timecapsule unmount
+
+[Install]
+WantedBy=multi-user.target

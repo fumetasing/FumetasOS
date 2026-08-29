@@ -1,0 +1,15 @@
+[Unit]
+Description=Mostrar Time Capsule dentro de Datos para CasaOS
+BindsTo=fumetaos-timecapsule.service
+After=fumetaos-timecapsule.service
+Before=casaos.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+ExecStart=/usr/bin/mount --bind /mnt/timecapsule /DATA/TimeCapsule
+ExecStop=/usr/bin/umount /DATA/TimeCapsule
+
+[Install]
+WantedBy=multi-user.target

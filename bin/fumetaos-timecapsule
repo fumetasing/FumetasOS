@@ -1,0 +1,118 @@
+#!/bin/bash
+
+set -euo pipefail
+
+MOUNTPOINT="/mnt/timecapsule"
+CREDENTIAL_FILE="/etc/fumetaos/timecapsule-password"
+
+AFP_USERNAME="Fumetasing"
+AFP_HOST="192.168.1.2"
+AFP_PORT="548"
+AFP_VOLUME="Data"
+
+mostrar_error()
+{
+    echo "❌ $1"
+    exit 20
+}
+
+esta_montado()
+{
+    findmnt -rn -M "$MOUNTPOINT" >/dev/null 2>&1
+}
+
+codificar_url()
+{
+    local VALUE="$1"
+    local RESULT=""
+    local CHARACTER=""
+    local ENCODED_CHARACTER=""
+    local INDEX=0
+
+    LC_ALL=C
+
+    for ((INDEX = 0; INDEX < ${#VALUE}; INDEX++))
+    do
+        CHARACTER="${VALUE:INDEX:1}"
+
+        case "$CHARACTER" in
+            [a-zA-Z0-9.~_-])
+                RESULT+="$CHARACTER"
+                ;;
+            *)
+                printf -v ENCODED_CHARACTER '%%%02X' "'$CHARACTER"
+                RESULT+="$ENCODED_CHARACTER"
+                ;;
+        esac
+    done
+
+    printf '%s' "$RESULT"
+}
+
+montar()
+{
+    [ -r "$CREDENTIAL_FILE" ] ||
+        mostrar_error "No se puede leer la contraseña de la Time Capsule"
+
+    install -d \
+        -o server \
+        -g server \
+        -m 0750 \
+        "$MOUNTPOINT"
+
+    if esta_montado
+    then
+        echo "✅ Time Capsule ya montada: $MOUNTPOINT"
+        exit 0
+    fi
+
+    AFP_PASSWORD="$(<"$CREDENTIAL_FILE")"
+    AFP_PASSWORD_ENCODED="$(codificar_url "$AFP_PASSWORD")"
+
+    AFP_URL="afp://${AFP_USERNAME};AUTH=DHX2:${AFP_PASSWORD_ENCODED}@${AFP_HOST}:${AFP_PORT}/${AFP_VOLUME}"
+
+    unset AFP_PASSWORD
+    unset AFP_PASSWORD_ENCODED
+
+    echo "💾 Montando Time Capsule en $MOUNTPOINT"
+
+    /usr/local/bin/mount_afpfs \
+        -o rw,user=server,group=server \
+        "$AFP_URL" \
+        "$MOUNTPOINT"
+
+    esta_montado ||
+        mostrar_error "El montaje AFP no se completó"
+
+    echo "✅ Time Capsule montada correctamente"
+}
+
+desmontar()
+{
+    if ! esta_montado
+    then
+        echo "ℹ️ Time Capsule no estaba montada"
+        exit 0
+    fi
+
+    echo "🔌 Desmontando Time Capsule"
+
+    /usr/bin/fusermount3 -uz "$MOUNTPOINT"
+
+    echo "✅ Time Capsule desmontada"
+}
+
+case "${1:-}" in
+    mount)
+        montar
+        ;;
+    unmount)
+        desmontar
+        ;;
+    *)
+        echo "Uso:"
+        echo "fumetaos-timecapsule mount"
+        echo "fumetaos-timecapsule unmount"
+        exit 20
+        ;;
+esac
