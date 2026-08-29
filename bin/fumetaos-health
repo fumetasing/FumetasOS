@@ -55,6 +55,13 @@ if [ "$TELEGRAM" -eq 1 ]; then
 
     separator
 
+    echo "💾 Time Capsule"
+    /opt/fumetaos/modules/monitor/timecapsule.sh
+    RET=$?
+    [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+    separator
+
     echo "🔒 Seguridad"
     /opt/fumetaos/modules/monitor/security.sh
     RET=$?
@@ -130,6 +137,13 @@ else
 
     echo "🛠️ Servicios"
     /opt/fumetaos/modules/monitor/services.sh
+    RET=$?
+    [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+    echo
+
+    echo "💾 Time Capsule"
+    /opt/fumetaos/modules/monitor/timecapsule.sh
     RET=$?
     [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 

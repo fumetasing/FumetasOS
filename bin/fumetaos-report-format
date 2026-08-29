@@ -28,6 +28,11 @@ do
             echo "$LINE"
             ;;
 
+        "💾 Time Capsule")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
+
         "🔒 Seguridad")
             echo "$SEPARATOR"
             echo "$LINE"
