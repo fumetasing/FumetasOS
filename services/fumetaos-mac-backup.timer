@@ -1,8 +1,8 @@
 [Unit]
-Description=Ejecutar la copia espejo de FumetaOS al Mac a las 02:00
+Description=Ejecutar copia espejo diaria de datos FumetaOS al Mac
 
 [Timer]
-OnCalendar=*-*-* 02:00:00
+OnCalendar=*-*-* 01:00:00
 Persistent=true
 AccuracySec=1min
 
