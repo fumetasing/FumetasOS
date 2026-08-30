@@ -75,4 +75,11 @@ mostrar_copia \
     "fumetaos-recovery-backup.timer" \
     "Recuperación cifrada"
 
+echo
+
+mostrar_copia \
+    "fumetaos-recovery-verify.service" \
+    "fumetaos-recovery-verify.timer" \
+    "Verificación cifrada"
+
 exit "$ERROR"
