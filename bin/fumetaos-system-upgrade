@@ -4,11 +4,48 @@ set -euo pipefail
 
 LOCK_FILE="/run/lock/fumetaos-system-upgrade.lock"
 APT_LOCK_TIMEOUT="1800"
+TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
+CURRENT_STEP="Preparación"
 
 mostrar_error()
 {
     echo "❌ $1"
     exit 20
+}
+
+enviar_telegram()
+{
+    local message="$1"
+
+    if [ ! -x "$TELEGRAM_NOTIFY" ]; then
+        echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
+        return 0
+    fi
+
+    if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
+        echo "⚠️ No se pudo enviar la notificación de Telegram"
+    fi
+}
+
+manejar_error()
+{
+    local status="$?"
+
+    trap - ERR
+
+    echo
+    echo "🔴 La actualización semanal ha fallado en: $CURRENT_STEP"
+
+    enviar_telegram "🔴 FumetaOS ERROR
+
+Actualización semanal de Ubuntu fallida
+
+Paso: $CURRENT_STEP
+Código: $status
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
+
+    exit "$status"
 }
 
 [ "$(id -u)" -eq 0 ] ||
@@ -29,20 +66,25 @@ APT_OPTIONS=(
     -o Dpkg::Options::=--force-confold
 )
 
+trap manejar_error ERR
+
 echo "🔄 Actualización semanal de Ubuntu"
 echo
 
-echo "📥 Actualizando índices de paquetes"
+CURRENT_STEP="Actualización de índices de paquetes"
+echo "📥 $CURRENT_STEP"
 apt-get "${APT_OPTIONS[@]}" update
 
 echo
-echo "📦 Instalando actualizaciones normales"
+CURRENT_STEP="Instalación de actualizaciones normales"
+echo "📦 $CURRENT_STEP"
 apt-get "${APT_OPTIONS[@]}" \
     --yes \
     upgrade
 
 echo
-echo "📦 Resolviendo actualizaciones completas"
+CURRENT_STEP="Resolución de actualizaciones completas"
+echo "📦 $CURRENT_STEP"
 apt-get "${APT_OPTIONS[@]}" \
     --yes \
     dist-upgrade
@@ -50,7 +92,17 @@ apt-get "${APT_OPTIONS[@]}" \
 if [ -f /var/run/reboot-required ]; then
     echo
     echo "🟡 Hay un reinicio pendiente, pero no se reiniciará automáticamente"
+
+    enviar_telegram "🟡 FumetaOS REINICIO NECESARIO
+
+La actualización semanal de Ubuntu ha terminado correctamente.
+
+Hay un reinicio pendiente. El servidor no se ha reiniciado automáticamente.
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
 fi
+
+trap - ERR
 
 echo
 echo "✅ Actualización semanal completada"

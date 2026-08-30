@@ -121,6 +121,12 @@ if [ "$TELEGRAM" -eq 1 ]; then
     echo "📦 Actualizaciones"
     /opt/fumetaos/modules/monitor/updates.sh
 
+    if [ -f /var/run/reboot-required ]; then
+        /opt/fumetaos/modules/monitor/reboot.sh
+        RET=$?
+        [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+    fi
+
     separator
 
 else
@@ -207,6 +213,12 @@ else
 
     echo "📦 Actualizaciones"
     /opt/fumetaos/modules/monitor/updates.sh
+
+    if [ -f /var/run/reboot-required ]; then
+        /opt/fumetaos/modules/monitor/reboot.sh
+        RET=$?
+        [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+    fi
 
 fi
 
