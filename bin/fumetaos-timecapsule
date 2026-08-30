@@ -10,15 +10,32 @@ AFP_HOST="192.168.1.2"
 AFP_PORT="548"
 AFP_VOLUME="Data"
 
+NETATALK_CLIENT_VERSION="0.9.5"
+NETATALK_CLIENT_URL="https://github.com/Netatalk/netatalk-client/archive/refs/tags/${NETATALK_CLIENT_VERSION}.tar.gz"
+MOUNT_AFPFS="/usr/local/bin/mount_afpfs"
+AFP_CLIENT="/usr/local/bin/afp_client"
+
 mostrar_error()
 {
     echo "❌ $1"
     exit 20
 }
 
+requiere_root()
+{
+    [ "$(id -u)" -eq 0 ] ||
+        mostrar_error "Esta acción debe ejecutarse como root"
+}
+
 esta_montado()
 {
     findmnt -rn -M "$MOUNTPOINT" >/dev/null 2>&1
+}
+
+cliente_instalado()
+{
+    [ -x "$MOUNT_AFPFS" ] &&
+        [ -x "$AFP_CLIENT" ]
 }
 
 codificar_url()
@@ -49,10 +66,125 @@ codificar_url()
     printf '%s' "$RESULT"
 }
 
+instalar_cliente()
+{
+    local FORCE="${1:-}"
+    local BUILD_DIR=""
+    local SOURCE_ARCHIVE=""
+    local SOURCE_DIR=""
+
+    requiere_root
+
+    if cliente_instalado && [ "$FORCE" != "--force" ]
+    then
+        echo "✅ Cliente AFP ya instalado"
+        echo "   $MOUNT_AFPFS"
+        echo
+        echo "Para reconstruirlo: fumetaos-timecapsule install-client --force"
+        exit 0
+    fi
+
+    command -v apt-get >/dev/null 2>&1 ||
+        mostrar_error "APT no está disponible"
+
+    echo "📦 Instalando dependencias del cliente AFP"
+
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update
+
+    apt-get install \
+        --yes \
+        build-essential \
+        ca-certificates \
+        curl \
+        meson \
+        ninja-build \
+        pkg-config \
+        libfuse3-dev \
+        libgcrypt20-dev \
+        libreadline-dev
+
+    BUILD_DIR="$(mktemp -d /tmp/fumetaos-netatalk-client.XXXXXX)"
+    SOURCE_ARCHIVE="$BUILD_DIR/netatalk-client.tar.gz"
+
+    limpiar_instalacion()
+    {
+        rm -rf "$BUILD_DIR"
+    }
+
+    trap limpiar_instalacion EXIT
+
+    echo "⬇️ Descargando Netatalk Client v${NETATALK_CLIENT_VERSION}"
+
+    curl \
+        --fail \
+        --location \
+        --retry 4 \
+        --retry-delay 2 \
+        --output "$SOURCE_ARCHIVE" \
+        "$NETATALK_CLIENT_URL"
+
+    tar \
+        --extract \
+        --gzip \
+        --file "$SOURCE_ARCHIVE" \
+        --directory "$BUILD_DIR"
+
+    SOURCE_DIR="$BUILD_DIR/netatalk-client-${NETATALK_CLIENT_VERSION}"
+
+    [ -d "$SOURCE_DIR" ] ||
+        mostrar_error "No se pudo extraer el código del cliente AFP"
+
+    echo "🔨 Compilando Netatalk Client v${NETATALK_CLIENT_VERSION}"
+
+    meson setup \
+        "$SOURCE_DIR/build" \
+        "$SOURCE_DIR" \
+        -Dbuildtype=release
+
+    meson compile -C "$SOURCE_DIR/build"
+    meson install -C "$SOURCE_DIR/build"
+
+    cliente_instalado ||
+        mostrar_error "El cliente AFP no se instaló correctamente"
+
+    echo "✅ Cliente AFP instalado correctamente"
+    echo "   $MOUNT_AFPFS"
+}
+
+mostrar_estado()
+{
+    echo "💾 Time Capsule AFP"
+    echo "   Servidor: $AFP_HOST"
+    echo "   Volumen: $AFP_VOLUME"
+    echo "   Punto interno: $MOUNTPOINT"
+    echo "   Punto CasaOS: /DATA/TimeCapsule"
+
+    if cliente_instalado
+    then
+        echo "✅ Cliente AFP instalado"
+    else
+        echo "❌ Cliente AFP no instalado"
+    fi
+
+    if esta_montado
+    then
+        echo "✅ Time Capsule montada"
+    else
+        echo "🟡 Time Capsule no montada"
+    fi
+}
+
 montar()
 {
+    requiere_root
+
     [ -r "$CREDENTIAL_FILE" ] ||
         mostrar_error "No se puede leer la contraseña de la Time Capsule"
+
+    cliente_instalado ||
+        mostrar_error "El cliente AFP no está instalado. Ejecuta: fumetaos-timecapsule install-client"
 
     install -d \
         -o server \
@@ -76,7 +208,7 @@ montar()
 
     echo "💾 Montando Time Capsule en $MOUNTPOINT"
 
-    /usr/local/bin/mount_afpfs \
+    "$MOUNT_AFPFS" \
         -o rw,user=server,group=server \
         "$AFP_URL" \
         "$MOUNTPOINT"
@@ -89,6 +221,8 @@ montar()
 
 desmontar()
 {
+    requiere_root
+
     if ! esta_montado
     then
         echo "ℹ️ Time Capsule no estaba montada"
@@ -103,6 +237,12 @@ desmontar()
 }
 
 case "${1:-}" in
+    install-client)
+        instalar_cliente "${2:-}"
+        ;;
+    status)
+        mostrar_estado
+        ;;
     mount)
         montar
         ;;
@@ -111,6 +251,8 @@ case "${1:-}" in
         ;;
     *)
         echo "Uso:"
+        echo "fumetaos-timecapsule install-client [--force]"
+        echo "fumetaos-timecapsule status"
         echo "fumetaos-timecapsule mount"
         echo "fumetaos-timecapsule unmount"
         exit 20
