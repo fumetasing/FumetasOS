@@ -7,6 +7,7 @@ PASSWORD_FILE="/etc/fumetaos/restic-password"
 CACHE_DIR="/var/cache/fumetaos-restic"
 METADATA_DIR="/var/lib/fumetaos/recovery-metadata"
 LOCK_FILE="/run/lock/fumetaos-recovery-backup.lock"
+TIMECAPSULE_MOUNT="/DATA/TimeCapsule"
 
 RUNNING_CONTAINERS=()
 CASAOS_WAS_ACTIVE=0
@@ -47,6 +48,13 @@ restaurar_servicios()
 limpiar()
 {
     restaurar_servicios
+}
+
+interrumpir()
+{
+    echo "⚠️ Copia interrumpida; restaurando CasaOS y las aplicaciones"
+    restaurar_servicios
+    exit 143
 }
 
 parar_servicios()
@@ -107,6 +115,7 @@ crear_metadatos()
 crear_backup()
 {
     local sources
+    local excludes
 
     [ -f "$PASSWORD_FILE" ] ||
         mostrar_error "No existe el archivo de contraseña de Restic"
@@ -118,6 +127,7 @@ crear_backup()
         mostrar_error "Restic no está instalado"
 
     trap limpiar EXIT
+    trap interrumpir INT TERM
 
     echo "💾 Preparando copia de recuperación del servidor"
     echo "⏸️ Deteniendo temporalmente CasaOS y las aplicaciones"
@@ -136,15 +146,22 @@ crear_backup()
         "$METADATA_DIR"
     )
 
+    excludes=(
+        --exclude "$TIMECAPSULE_MOUNT"
+    )
+
     if [ -d /var/spool/cron ]; then
         sources+=(/var/spool/cron)
     fi
 
     echo "📦 Guardando configuración, credenciales y datos de aplicaciones"
+    echo "ℹ️ Excluyendo almacenamiento remoto: $TIMECAPSULE_MOUNT"
 
     restic_cmd backup \
         --tag fumetaos-recovery \
         --host server \
+        --one-file-system \
+        "${excludes[@]}" \
         "${sources[@]}"
 
     echo "🧹 Aplicando retención"
@@ -157,7 +174,7 @@ crear_backup()
         --keep-monthly 12
 
     restaurar_servicios
-    trap - EXIT
+    trap - EXIT INT TERM
 
     echo "✅ Copia de recuperación completada"
 }
