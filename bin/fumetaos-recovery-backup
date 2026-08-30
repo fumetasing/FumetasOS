@@ -187,7 +187,7 @@ listar_backups()
 verificar_backups()
 {
     restic_cmd snapshots --tag fumetaos-recovery
-    restic_cmd check
+    restic_cmd check --read-data
 }
 
 estadisticas()

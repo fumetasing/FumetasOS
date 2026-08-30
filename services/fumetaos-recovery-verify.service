@@ -1,0 +1,13 @@
+[Unit]
+Description=Verificación semanal de la copia cifrada de FumetaOS
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/mnt/datos
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=4h
+ExecStart=/opt/fumetaos/bin/fumetaos-recovery-backup verify

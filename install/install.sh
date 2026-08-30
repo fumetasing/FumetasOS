@@ -17,6 +17,7 @@ fumetaos-report.timer
 fumetaos-backup.timer
 fumetaos-mac-backup.timer
 fumetaos-recovery-backup.timer
+fumetaos-recovery-verify.timer
 fumetaos-system-upgrade.timer
 "
 
