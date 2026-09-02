@@ -1,9 +1,8 @@
 [Unit]
-Description=Ejecutar actualización completa de Ubuntu dos veces por semana
+Description=Ejecutar actualización completa de Ubuntu cada día
 
 [Timer]
-OnCalendar=Wed *-*-* 09:00:00
-OnCalendar=Sun *-*-* 09:00:00
+OnCalendar=*-*-* 06:00:00
 Persistent=true
 
 [Install]

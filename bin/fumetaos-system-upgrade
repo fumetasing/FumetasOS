@@ -34,11 +34,11 @@ manejar_error()
     trap - ERR
 
     echo
-    echo "🔴 La actualización semanal ha fallado en: $CURRENT_STEP"
+    echo "🔴 La actualización diaria ha fallado en: $CURRENT_STEP"
 
     enviar_telegram "🔴 FumetaOS ERROR
 
-Actualización semanal de Ubuntu fallida
+Actualización diaria de Ubuntu fallida
 
 Paso: $CURRENT_STEP
 Código: $status
@@ -68,7 +68,7 @@ APT_OPTIONS=(
 
 trap manejar_error ERR
 
-echo "🔄 Actualización semanal de Ubuntu"
+echo "🔄 Actualización diaria de Ubuntu"
 echo
 
 CURRENT_STEP="Actualización de índices de paquetes"
@@ -95,7 +95,7 @@ if [ -f /var/run/reboot-required ]; then
 
     enviar_telegram "🟡 FumetaOS REINICIO NECESARIO
 
-La actualización semanal de Ubuntu ha terminado correctamente.
+La actualización diaria de Ubuntu ha terminado correctamente.
 
 Hay un reinicio pendiente. El servidor no se ha reiniciado automáticamente.
 
@@ -105,4 +105,4 @@ fi
 trap - ERR
 
 echo
-echo "✅ Actualización semanal completada"
+echo "✅ Actualización diaria completada"
