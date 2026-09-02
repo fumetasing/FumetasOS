@@ -1,0 +1,118 @@
+#!/bin/bash
+
+set -euo pipefail
+
+SOURCE_BASE="/DATA/TimeCapsule/Multimedia"
+FOLDERS=(
+    Peliculas
+    Series
+)
+
+MAC_USER="fumetasing"
+MAC_HOST="192.168.1.5"
+MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server/TimeCapsule"
+SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
+SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
+LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
+
+DRY_RUN=()
+
+mostrar_error()
+{
+    echo "❌ $1"
+    exit 20
+}
+
+case "${1:-}" in
+    "")
+        ;;
+    --dry-run)
+        DRY_RUN=(--dry-run)
+        ;;
+    *)
+        echo "Uso:"
+        echo "fumetaos-timecapsule-mac-backup"
+        echo "fumetaos-timecapsule-mac-backup --dry-run"
+        exit 20
+        ;;
+esac
+
+[ "$(id -u)" -eq 0 ] ||
+    mostrar_error "Esta copia debe ejecutarse como root"
+
+mountpoint -q /DATA/TimeCapsule ||
+    mostrar_error "/DATA/TimeCapsule no está montado"
+
+for FOLDER in "${FOLDERS[@]}"
+do
+    [ -d "$SOURCE_BASE/$FOLDER" ] ||
+        mostrar_error "No existe el origen: $SOURCE_BASE/$FOLDER"
+done
+
+[ -r "$SSH_KEY" ] ||
+    mostrar_error "No existe la clave SSH: $SSH_KEY"
+
+[ -r "$SSH_KNOWN_HOSTS" ] ||
+    mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
+
+exec 9>"$LOCK_FILE"
+
+flock -n 9 ||
+    mostrar_error "Ya hay una copia al Mac en curso"
+
+SSH_COMMAND=(
+    ssh
+    -i "$SSH_KEY"
+    -o BatchMode=yes
+    -o ConnectTimeout=20
+    -o ServerAliveInterval=30
+    -o ServerAliveCountMax=6
+    -o "UserKnownHostsFile=$SSH_KNOWN_HOSTS"
+    -o StrictHostKeyChecking=yes
+)
+
+if [ "${#DRY_RUN[@]}" -gt 0 ]; then
+    "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        "test -d '$MAC_DESTINATION/Peliculas' && test -d '$MAC_DESTINATION/Series'" ||
+        mostrar_error "Falta Peliculas o Series en el disco USB del Mac"
+else
+    "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        "mkdir -p '$MAC_DESTINATION/Peliculas' '$MAC_DESTINATION/Series'" ||
+        mostrar_error "El Mac o el disco USB no están disponibles"
+fi
+
+echo "💾 Copia espejo de Time Capsule al Mac"
+echo "📍 Origen: $SOURCE_BASE"
+echo "📍 Destino: $MAC_DESTINATION"
+echo
+
+for FOLDER in "${FOLDERS[@]}"
+do
+    SOURCE_DIR="$SOURCE_BASE/$FOLDER/"
+    RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/$FOLDER/"
+
+    echo "📁 Copiando: $FOLDER"
+
+    rsync \
+        -aH \
+        --no-owner \
+        --no-group \
+        --delete-delay \
+        --partial \
+        --human-readable \
+        --stats \
+        "${DRY_RUN[@]}" \
+        -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+        "$SOURCE_DIR" \
+        "$RSYNC_DESTINATION"
+
+    echo
+done
+
+if [ "${#DRY_RUN[@]}" -gt 0 ]; then
+    echo "✅ Simulación completada: no se ha copiado ni borrado nada"
+else
+    echo "✅ Copia espejo de Time Capsule completada"
+fi

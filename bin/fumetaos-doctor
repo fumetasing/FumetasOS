@@ -1,11 +1,8 @@
 #!/bin/bash
 
 ###########################################################
-
 # FumetaOS
-
 # Doctor
-
 ###########################################################
 
 ###########################################################
@@ -15,16 +12,12 @@
 source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/apps.sh"
 
-
-
 ###########################################################
 # Variables
 ###########################################################
 
 PUNTOS=0
 TOTAL=0
-
-
 
 ###########################################################
 # Detectar paquete
@@ -33,12 +26,8 @@ TOTAL=0
 PACKAGE_DIR="/opt/fumetaos/install/package"
 
 if [ -d "$INSTALL_DIR/package" ]; then
-
     PACKAGE_DIR="$INSTALL_DIR/package"
-
 fi
-
-
 
 ###########################################################
 # Comprobación general
@@ -46,27 +35,19 @@ fi
 
 check()
 {
+    DESCRIPCION="$1"
+    shift
 
-DESCRIPCION="$1"
-shift
+    TOTAL=$((TOTAL+1))
 
-TOTAL=$((TOTAL+1))
-
-if "$@"
-then
-
-    echo "✅ $DESCRIPCION"
-    PUNTOS=$((PUNTOS+1))
-
-else
-
-    echo "❌ $DESCRIPCION"
-
-fi
-
+    if "$@"
+    then
+        echo "✅ $DESCRIPCION"
+        PUNTOS=$((PUNTOS+1))
+    else
+        echo "❌ $DESCRIPCION"
+    fi
 }
-
-
 
 ###########################################################
 # Funciones seguridad
@@ -74,12 +55,14 @@ fi
 
 firewall_active()
 {
-
-sudo ufw status 2>/dev/null | grep -q "Status: active"
-
+    sudo ufw status 2>/dev/null | grep -q "Status: active"
 }
 
-
+upgrade_after_recovery()
+{
+    systemctl cat fumetaos-recovery-backup.service 2>/dev/null |
+        grep -qx 'OnSuccess=fumetaos-system-upgrade.service'
+}
 
 ###########################################################
 # Inicio
@@ -89,8 +72,6 @@ echo
 echo "🩺 FumetaOS Doctor"
 echo
 
-
-
 ###########################################################
 # Sistema
 ###########################################################
@@ -99,12 +80,8 @@ echo "📁 Sistema"
 echo
 
 check "Configuración" test -f "$CONFIG_FILE"
-
 check "Versión" test -f "$VERSION_FILE"
-
 check "Scripts ejecutables" test -x "$BIN_DIR/fumetaos"
-
-
 
 ###########################################################
 # Configuración
@@ -115,12 +92,8 @@ echo "🔧 Configuración"
 echo
 
 check "Telegram configurado" test -n "$TELEGRAM_TOKEN"
-
 check "SSD configurado" test -n "$SSD_DEVICE"
-
 check "HDD configurado" test -n "$HDD_DEVICE"
-
-
 
 ###########################################################
 # Seguridad
@@ -132,8 +105,6 @@ echo
 
 check "Firewall UFW" firewall_active
 
-
-
 ###########################################################
 # Servicios
 ###########################################################
@@ -143,16 +114,10 @@ echo "⚙️ Servicios"
 echo
 
 check "Docker" systemctl is-active --quiet docker
-
 check "CasaOS" systemctl is-active --quiet casaos
-
 check "Tailscale" systemctl is-active --quiet tailscaled
-
 check "No-IP DUC" systemctl is-active --quiet noip-duc
-
 check "SSH" systemctl is-active --quiet ssh
-
-
 
 ###########################################################
 # Timers FumetaOS
@@ -162,15 +127,24 @@ echo
 echo "⏱️ Timers FumetaOS"
 echo
 
-
 for TIMER in $FUMETAOS_TIMERS
 do
+    case "$TIMER" in
+        fumetaos-mac-backup.timer|fumetaos-system-upgrade.timer)
+            continue
+            ;;
+    esac
 
     check "$TIMER" systemctl is-active --quiet "$TIMER"
-
 done
 
+check \
+    "fumetaos-timecapsule-mac-backup.timer" \
+    systemctl is-active --quiet fumetaos-timecapsule-mac-backup.timer
 
+check \
+    "Actualización Ubuntu encadenada" \
+    upgrade_after_recovery
 
 ###########################################################
 # Aplicaciones
@@ -180,31 +154,20 @@ echo
 echo "📦 Aplicaciones"
 echo
 
-
 for APP in $(app_list)
 do
-
     app_load "$APP"
 
     TOTAL=$((TOTAL+1))
 
-
     if app_running
     then
-
         echo "✅ $APP_NAME"
-
         PUNTOS=$((PUNTOS+1))
-
     else
-
         echo "❌ $APP_NAME"
-
     fi
-
 done
-
-
 
 ###########################################################
 # Paquete FumetaOS
@@ -214,18 +177,11 @@ echo
 echo "📦 Paquete"
 echo
 
-
 check "Paquete VERSION" test -f "$PACKAGE_DIR/VERSION"
-
 check "Paquete bin" test -d "$PACKAGE_DIR/bin"
-
 check "Paquete core" test -d "$PACKAGE_DIR/core"
-
 check "Paquete modules" test -d "$PACKAGE_DIR/modules"
-
 check "Paquete services" test -d "$PACKAGE_DIR/services"
-
-
 
 ###########################################################
 # Datos
@@ -235,12 +191,8 @@ echo
 echo "💾 Datos"
 echo
 
-
 check "Backup disponible" test -n "$(ls /mnt/datos/backups/fumetaos/fumetaos-backup-* 2>/dev/null | head -1)"
-
 check "Histórico funcionando" test -s "$DATA_DIR/history.log"
-
-
 
 ###########################################################
 # Resultado

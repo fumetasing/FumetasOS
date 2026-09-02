@@ -3,6 +3,7 @@ Description=Copia incremental de recuperación completa de FumetaOS
 After=network-online.target docker.service casaos.service
 Wants=network-online.target
 RequiresMountsFor=/mnt/datos
+OnSuccess=fumetaos-system-upgrade.service
 
 [Service]
 Type=oneshot
