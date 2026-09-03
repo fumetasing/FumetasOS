@@ -4,6 +4,8 @@ set -euo pipefail
 
 SOURCE_BASE="/DATA/TimeCapsule/Multimedia"
 FOLDERS=(
+    AVANTIS
+    Nenas
     Peliculas
     Series
 )
@@ -21,6 +23,24 @@ mostrar_error()
 {
     echo "❌ $1"
     exit 20
+}
+
+preparar_directorios_destino()
+{
+    SOURCE_DIR="$1"
+    DESTINATION_DIR="$2"
+
+    if ! find "$SOURCE_DIR" -type d -printf '%P\n' |
+        "${SSH_COMMAND[@]}" \
+            "$MAC_USER@$MAC_HOST" \
+            "while IFS= read -r RELATIVE
+            do
+                [ -z \"\$RELATIVE\" ] ||
+                    mkdir -p '$DESTINATION_DIR'/\"\$RELATIVE\"
+            done"
+    then
+        mostrar_error "No se pudo preparar la estructura de carpetas en el Mac"
+    fi
 }
 
 case "${1:-}" in
@@ -71,15 +91,33 @@ SSH_COMMAND=(
     -o StrictHostKeyChecking=yes
 )
 
+REMOTE_DESTINATIONS_COMMAND="mkdir -p"
+
+for FOLDER in "${FOLDERS[@]}"
+do
+    REMOTE_DESTINATIONS_COMMAND+=" '$MAC_DESTINATION/$FOLDER'"
+done
+
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
+    REMOTE_CHECK_COMMAND=""
+
+    for FOLDER in "${FOLDERS[@]}"
+    do
+        if [ -n "$REMOTE_CHECK_COMMAND" ]; then
+            REMOTE_CHECK_COMMAND+=" && "
+        fi
+
+        REMOTE_CHECK_COMMAND+="test -d '$MAC_DESTINATION/$FOLDER'"
+    done
+
     "${SSH_COMMAND[@]}" \
         "$MAC_USER@$MAC_HOST" \
-        "test -d '$MAC_DESTINATION/Peliculas' && test -d '$MAC_DESTINATION/Series'" ||
-        mostrar_error "Falta Peliculas o Series en el disco USB del Mac"
+        "$REMOTE_CHECK_COMMAND" ||
+        mostrar_error "Falta alguna carpeta de Time Capsule en el disco USB del Mac"
 else
     "${SSH_COMMAND[@]}" \
         "$MAC_USER@$MAC_HOST" \
-        "mkdir -p '$MAC_DESTINATION/Peliculas' '$MAC_DESTINATION/Series'" ||
+        "$REMOTE_DESTINATIONS_COMMAND" ||
         mostrar_error "El Mac o el disco USB no están disponibles"
 fi
 
@@ -91,9 +129,16 @@ echo
 for FOLDER in "${FOLDERS[@]}"
 do
     SOURCE_DIR="$SOURCE_BASE/$FOLDER/"
-    RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/$FOLDER/"
+    DESTINATION_DIR="$MAC_DESTINATION/$FOLDER"
+    RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$DESTINATION_DIR/"
 
     echo "📁 Copiando: $FOLDER"
+
+    if [ "${#DRY_RUN[@]}" -eq 0 ]; then
+        preparar_directorios_destino \
+            "$SOURCE_DIR" \
+            "$DESTINATION_DIR"
+    fi
 
     rsync \
         -aH \
