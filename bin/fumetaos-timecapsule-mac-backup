@@ -12,7 +12,7 @@ FOLDERS=(
 
 MAC_USER="fumetasing"
 MAC_HOST="192.168.1.5"
-MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server/TimeCapsule"
+MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server/TimeCapsule/Multimedia"
 SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
 SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
@@ -113,7 +113,7 @@ if [ "${#DRY_RUN[@]}" -gt 0 ]; then
     "${SSH_COMMAND[@]}" \
         "$MAC_USER@$MAC_HOST" \
         "$REMOTE_CHECK_COMMAND" ||
-        mostrar_error "Falta alguna carpeta de Time Capsule en el disco USB del Mac"
+        mostrar_error "Falta alguna carpeta de Multimedia en el disco USB del Mac"
 else
     "${SSH_COMMAND[@]}" \
         "$MAC_USER@$MAC_HOST" \

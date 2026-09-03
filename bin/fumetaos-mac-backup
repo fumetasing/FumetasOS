@@ -69,7 +69,7 @@ echo
 
 "${SSH_COMMAND[@]}" \
     "$MAC_USER@$MAC_HOST" \
-    "test -d $MAC_DESTINATION" ||
+    "test -d '$MAC_DESTINATION'" ||
     mostrar_error "El Mac o el disco USB no están disponibles"
 
 RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"
@@ -83,6 +83,8 @@ rsync \
     --human-readable \
     --stats \
     --exclude='/lost+found/' \
+    --exclude='/TimeCapsule/' \
+    --filter='P /TimeCapsule/***' \
     "${DRY_RUN[@]}" \
     -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
     "$SOURCE_DIR" \
