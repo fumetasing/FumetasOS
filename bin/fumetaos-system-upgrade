@@ -51,7 +51,7 @@ Código: $status
 [ "$(id -u)" -eq 0 ] ||
     mostrar_error "Esta actualización debe ejecutarse como root"
 
-command -v apt-get >/dev/null 2>&1 ||
+command -v apt >/dev/null 2>&1 ||
     mostrar_error "APT no está disponible"
 
 exec 9>"$LOCK_FILE"
@@ -73,19 +73,19 @@ echo
 
 CURRENT_STEP="Actualización de índices de paquetes"
 echo "📥 $CURRENT_STEP"
-apt-get "${APT_OPTIONS[@]}" update
+apt "${APT_OPTIONS[@]}" update
 
 echo
 CURRENT_STEP="Instalación de actualizaciones normales"
 echo "📦 $CURRENT_STEP"
-apt-get "${APT_OPTIONS[@]}" \
+apt "${APT_OPTIONS[@]}" \
     --yes \
     upgrade
 
 echo
 CURRENT_STEP="Resolución de actualizaciones completas"
 echo "📦 $CURRENT_STEP"
-apt-get "${APT_OPTIONS[@]}" \
+apt "${APT_OPTIONS[@]}" \
     --yes \
     dist-upgrade
 
