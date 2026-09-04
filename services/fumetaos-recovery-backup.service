@@ -10,5 +10,5 @@ Type=oneshot
 User=root
 Nice=19
 IOSchedulingClass=idle
-TimeoutStartSec=2h
+TimeoutStartSec=6h
 ExecStart=/opt/fumetaos/bin/fumetaos-recovery-backup create

@@ -9,13 +9,64 @@ MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server"
 SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
 SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
+TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
 
 DRY_RUN=()
+CURRENT_STEP="Preparación"
+
+enviar_telegram()
+{
+    local message="$1"
+
+    if [ ! -x "$TELEGRAM_NOTIFY" ]; then
+        echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
+        return 0
+    fi
+
+    if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
+        echo "⚠️ No se pudo enviar la notificación de Telegram"
+    fi
+}
+
+notificar_error()
+{
+    local status="$1"
+    local detail="$2"
+
+    [ "${#DRY_RUN[@]}" -eq 0 ] || return 0
+
+    enviar_telegram "🔴 FumetaOS ERROR
+
+Copia de datos al Mac fallida
+
+Paso: $CURRENT_STEP
+Detalle: $detail
+Código: $status
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
+}
 
 mostrar_error()
 {
-    echo "❌ $1"
+    local message="$1"
+
+    echo "❌ $message"
+    notificar_error 20 "$message"
     exit 20
+}
+
+manejar_error()
+{
+    local status="$?"
+
+    trap - ERR
+
+    echo
+    echo "🔴 La copia de datos al Mac ha fallado en: $CURRENT_STEP"
+
+    notificar_error "$status" "El comando no terminó correctamente"
+
+    exit "$status"
 }
 
 case "${1:-}" in
@@ -31,6 +82,8 @@ case "${1:-}" in
         exit 20
         ;;
 esac
+
+trap manejar_error ERR
 
 [ "$(id -u)" -eq 0 ] ||
     mostrar_error "Esta copia debe ejecutarse como root"
@@ -67,12 +120,16 @@ echo "💾 Copia espejo de /mnt/datos al Mac"
 echo "📍 Destino: $MAC_DESTINATION"
 echo
 
+CURRENT_STEP="Comprobación del Mac y del disco USB"
+
 "${SSH_COMMAND[@]}" \
     "$MAC_USER@$MAC_HOST" \
     "test -d '$MAC_DESTINATION'" ||
     mostrar_error "El Mac o el disco USB no están disponibles"
 
 RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"
+
+CURRENT_STEP="Copia espejo de /mnt/datos"
 
 rsync \
     -aH \
@@ -90,10 +147,21 @@ rsync \
     "$SOURCE_DIR" \
     "$RSYNC_DESTINATION"
 
+trap - ERR
+
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
     echo
     echo "✅ Simulación completada: no se ha copiado ni borrado nada"
 else
     echo
     echo "✅ Copia espejo completada"
+
+    enviar_telegram "✅ FumetaOS COPIA AL MAC
+
+La cadena nocturna de copias ha terminado correctamente.
+
+- Time Capsule/Multimedia: completada
+- /mnt/datos: completada
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
 fi
