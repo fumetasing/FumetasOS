@@ -68,6 +68,11 @@ do
             echo "$LINE"
             ;;
 
+        "🖥️ Máquinas virtuales")
+            echo "$SEPARATOR"
+            echo "$LINE"
+            ;;
+
         "📦 Aplicaciones")
             echo "$SEPARATOR"
             echo "$LINE"

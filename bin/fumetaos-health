@@ -1,11 +1,8 @@
 #!/bin/bash
 
 ###########################################################
-
 # FumetaOS
-
 # Health
-
 ###########################################################
 
 source "$(dirname "$0")/../core/common.sh"
@@ -22,12 +19,6 @@ if [ -f "$VERSION_FILE" ]; then
 else
     FUMETAOS_VERSION="desconocida"
 fi
-
-###########################################################
-
-# Formato
-
-###########################################################
 
 separator()
 {
@@ -106,6 +97,13 @@ if [ "$TELEGRAM" -eq 1 ]; then
 
     echo "🧠 Memoria"
     /opt/fumetaos/modules/monitor/memory.sh
+    RET=$?
+    [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+    separator
+
+    echo "🖥️ Máquinas virtuales"
+    /opt/fumetaos/modules/monitor/virtual-machines.sh
     RET=$?
     [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 
@@ -199,6 +197,13 @@ else
 
     echo "🧠 Memoria"
     /opt/fumetaos/modules/monitor/memory.sh
+    RET=$?
+    [ "$RET" -gt "$ERROR" ] && ERROR=$RET
+
+    echo
+
+    echo "🖥️ Máquinas virtuales"
+    /opt/fumetaos/modules/monitor/virtual-machines.sh
     RET=$?
     [ "$RET" -gt "$ERROR" ] && ERROR=$RET
 

@@ -7,6 +7,12 @@
 
 ERROR=0
 
+MAC_USER="fumetasing"
+MAC_HOST="192.168.1.5"
+MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server"
+SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
+SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
+
 ultima_ejecucion()
 {
     SERVICE="$1"
@@ -29,6 +35,57 @@ proxima_ejecucion()
     systemctl show "$1" \
         -p NextElapseUSecRealtime \
         --value 2>/dev/null
+}
+
+mostrar_espacio_usb_mac()
+{
+    SSH_COMMAND=(
+        ssh
+        -i "$SSH_KEY"
+        -o BatchMode=yes
+        -o ConnectTimeout=20
+        -o ServerAliveInterval=30
+        -o ServerAliveCountMax=6
+        -o "UserKnownHostsFile=$SSH_KNOWN_HOSTS"
+        -o StrictHostKeyChecking=yes
+    )
+
+    if ! USB_STATUS=$(
+        "${SSH_COMMAND[@]}" \
+            "$MAC_USER@$MAC_HOST" \
+            /bin/sh -s 2>/dev/null <<'REMOTE'
+TARGET="/Users/fumetasing/FumetaOS-Server"
+
+[ -d "$TARGET" ] || exit 20
+
+df -h "$TARGET" |
+    awk 'NR == 2 { print $4 "|" $5 }'
+REMOTE
+    )
+    then
+        echo "🔴 USB del Mac"
+        echo "   No disponible o no se pudo consultar"
+        ERROR=20
+        return
+    fi
+
+    USB_FREE=$(printf '%s\n' "$USB_STATUS" |
+        awk -F'|' 'NR == 1 { print $1 }')
+
+    USB_USED=$(printf '%s\n' "$USB_STATUS" |
+        awk -F'|' 'NR == 1 { print $2 }')
+
+    if [ -z "$USB_FREE" ] || [ -z "$USB_USED" ]
+    then
+        echo "🔴 USB del Mac"
+        echo "   No se pudo interpretar el espacio disponible"
+        ERROR=20
+        return
+    fi
+
+    echo "🟢 USB del Mac"
+    echo "   Libre: $USB_FREE"
+    echo "   Uso: $USB_USED"
 }
 
 mostrar_copia_programada()
@@ -112,6 +169,10 @@ mostrar_copia_encadenada()
 
 echo
 
+mostrar_espacio_usb_mac
+
+echo
+
 mostrar_copia_programada \
     "fumetaos-timecapsule-mac-backup.service" \
     "fumetaos-timecapsule-mac-backup.timer" \
@@ -129,7 +190,7 @@ echo
 mostrar_copia_programada \
     "fumetaos-recovery-backup.service" \
     "fumetaos-recovery-backup.timer" \
-    "Recuperación cifrada"
+    "Recuperación cifrada y máquinas virtuales"
 
 echo
 
