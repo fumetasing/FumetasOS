@@ -155,13 +155,4 @@ if [ "${#DRY_RUN[@]}" -gt 0 ]; then
 else
     echo
     echo "✅ Copia espejo completada"
-
-    enviar_telegram "✅ FumetaOS COPIA AL MAC
-
-La cadena nocturna de copias ha terminado correctamente.
-
-- Time Capsule/Multimedia: completada
-- /mnt/datos: completada
-
-⏱️ $(date '+%d/%m/%Y %H:%M')"
 fi

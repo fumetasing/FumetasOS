@@ -218,12 +218,4 @@ if [ "${#DRY_RUN[@]}" -gt 0 ]; then
     echo "✅ Simulación completada: no se ha copiado ni borrado nada"
 else
     echo "✅ Copia espejo de Time Capsule completada"
-
-    enviar_telegram "✅ FumetaOS TIME CAPSULE
-
-Copia de Time Capsule al Mac completada.
-
-Ahora empieza la copia espejo de /mnt/datos.
-
-⏱️ $(date '+%d/%m/%Y %H:%M')"
 fi
