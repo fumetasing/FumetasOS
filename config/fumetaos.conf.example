@@ -7,9 +7,8 @@
 # Telegram
 ###########################################################
 
-TELEGRAM_TOKEN="8683839937:AAG6LEl2zaKevxSdK9m1Fc2A4jiJtDs87nY"
-
-TELEGRAM_CHAT_ID="152903599"
+TELEGRAM_TOKEN=""
+TELEGRAM_CHAT_ID=""
 
 ###########################################################
 # Discos
