@@ -17,6 +17,7 @@ fumetaos-backup.timer
 fumetaos-timecapsule-mac-backup.timer
 fumetaos-recovery-backup.timer
 fumetaos-recovery-verify.timer
+fumetaos-system-upgrade.timer
 "
 
 leer_version()
@@ -143,9 +144,8 @@ actualizar()
     systemctl daemon-reload
 
     echo
-    echo "⛓️ Desactivando temporizadores reemplazados por la cadena nocturna"
+    echo "⛓️ Desactivando temporizador independiente reemplazado por la cadena nocturna"
     systemctl disable --now fumetaos-mac-backup.timer || true
-    systemctl disable --now fumetaos-system-upgrade.timer || true
 
     echo
     echo "⏱️ Actualizando timers"
