@@ -9,6 +9,7 @@ MAC_HOST="192.168.1.5"
 MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server"
 MAC_USB_MOUNT="/Volumes/Data USB"
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
+DELETE_LIMIT=50
 
 SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
 SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
@@ -16,6 +17,7 @@ LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
 TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
 
 DRY_RUN=()
+ALLOW_LARGE_DELETE=0
 CURRENT_STEP="Preparación"
 
 enviar_telegram()
@@ -88,40 +90,73 @@ punto_montaje()
         awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
 }
 
-[ -d "$ROOT" ] || {
-    echo "No existe el destino: $ROOT" >&2
-    exit 20
-}
+[ -d "$ROOT" ] || exit 20
 
 MOUNT_POINT=$(punto_montaje "$ROOT") || exit 20
+[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || exit 20
 
-[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || {
-    echo "El destino está en $MOUNT_POINT; se esperaba $EXPECTED_MOUNT" >&2
-    exit 20
-}
-
-[ -r "$ROOT" ] && [ -w "$ROOT" ] && [ -x "$ROOT" ] || {
-    echo "Sin permisos suficientes en el USB del Mac" >&2
-    exit 20
-}
+[ -r "$ROOT" ] && [ -w "$ROOT" ] && [ -x "$ROOT" ] || exit 20
 
 AVAILABLE_KB=$(df -kP "$ROOT" |
     awk 'NR == 2 { print $4 }')
 
 case "$AVAILABLE_KB" in
     ""|*[!0-9]*)
-        echo "No se pudo conocer el espacio libre del USB" >&2
         exit 20
         ;;
 esac
 
-[ "$AVAILABLE_KB" -ge "$MINIMUM_FREE_KB" ] || {
-    echo "Menos de 50 GiB libres en el USB del Mac" >&2
-    exit 20
-}
+[ "$AVAILABLE_KB" -ge "$MINIMUM_FREE_KB" ] || exit 20
 REMOTE
     then
         mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+    fi
+}
+
+comprobar_borrados_previstos()
+{
+    local delete_count
+
+    [ "$ALLOW_LARGE_DELETE" -eq 0 ] || {
+        echo "⚠️ Freno de borrados omitido manualmente"
+        return
+    }
+
+    CURRENT_STEP="Comprobación de borrados previstos"
+
+    if ! delete_count=$(
+        rsync \
+            -aH \
+            --no-owner \
+            --no-group \
+            --dry-run \
+            --delete-delay \
+            --itemize-changes \
+            --out-format='%i' \
+            --exclude='/lost+found/' \
+            --exclude='/TimeCapsule/' \
+            --filter='P /TimeCapsule/***' \
+            -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+            "$SOURCE_DIR" \
+            "$RSYNC_DESTINATION" |
+            awk '$0 == "*deleting" { count++ } END { print count + 0 }'
+    )
+    then
+        mostrar_error "No se pudo comprobar los borrados previstos"
+    fi
+
+    case "$delete_count" in
+        ""|*[!0-9]*)
+            mostrar_error "No se pudo interpretar los borrados previstos"
+            ;;
+    esac
+
+    if [ "$delete_count" -gt "$DELETE_LIMIT" ]; then
+        mostrar_error "Se cancelarían $delete_count borrados; límite automático: $DELETE_LIMIT"
+    fi
+
+    if [ "$delete_count" -gt 0 ]; then
+        echo "🛡️ Borrados previstos: $delete_count/$DELETE_LIMIT"
     fi
 }
 
@@ -131,10 +166,14 @@ case "${1:-}" in
     --dry-run)
         DRY_RUN=(--dry-run)
         ;;
+    --allow-large-delete)
+        ALLOW_LARGE_DELETE=1
+        ;;
     *)
         echo "Uso:"
         echo "fumetaos-mac-backup"
         echo "fumetaos-mac-backup --dry-run"
+        echo "fumetaos-mac-backup --allow-large-delete"
         exit 20
         ;;
 esac
@@ -178,9 +217,14 @@ comprobar_usb_mac
 echo "💾 Copia espejo de /mnt/datos al Mac"
 echo "📍 Destino: $MAC_DESTINATION"
 echo "💾 USB validado: $MAC_USB_MOUNT"
+echo "🛡️ Límite automático de borrados: $DELETE_LIMIT"
 echo
 
 RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"
+
+if [ "${#DRY_RUN[@]}" -eq 0 ]; then
+    comprobar_borrados_previstos
+fi
 
 CURRENT_STEP="Copia espejo de /mnt/datos"
 
