@@ -18,6 +18,8 @@ MAC_DESTINATION="$MAC_ROOT/TimeCapsule/Multimedia"
 MAC_USB_MOUNT="/Volumes/Data USB"
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
 DELETE_LIMIT=20
+MAX_RETRIES=3
+RETRY_DELAY=60
 
 SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
 SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
@@ -260,6 +262,47 @@ comprobar_borrados_previstos()
     fi
 }
 
+ejecutar_rsync_con_reintentos()
+{
+    local source_dir="$1"
+    local rsync_destination="$2"
+    local folder="$3"
+    local attempt=1
+    local status=20
+
+    while [ "$attempt" -le "$MAX_RETRIES" ]
+    do
+        echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
+
+        if rsync \
+            -aH \
+            --no-owner \
+            --no-group \
+            --delete-delay \
+            --partial \
+            --human-readable \
+            --stats \
+            "${DRY_RUN[@]}" \
+            -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+            "$source_dir" \
+            "$rsync_destination"
+        then
+            return 0
+        fi
+
+        status=$?
+
+        if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+            echo "⚠️ Falló $folder con código $status; reintentando en $RETRY_DELAY segundos"
+            sleep "$RETRY_DELAY"
+        fi
+
+        attempt=$((attempt + 1))
+    done
+
+    return "$status"
+}
+
 case "${1:-}" in
     "")
         ;;
@@ -329,6 +372,7 @@ echo "📍 Origen: $SOURCE_BASE"
 echo "📍 Destino: $MAC_DESTINATION"
 echo "💾 USB validado: $MAC_USB_MOUNT"
 echo "🛡️ Límite automático de borrados: $DELETE_LIMIT por carpeta"
+echo "🔄 Reintentos por carpeta: $MAX_RETRIES"
 echo
 
 for FOLDER in "${FOLDERS[@]}"
@@ -353,18 +397,13 @@ do
         CURRENT_STEP="Copia de $FOLDER"
     fi
 
-    rsync \
-        -aH \
-        --no-owner \
-        --no-group \
-        --delete-delay \
-        --partial \
-        --human-readable \
-        --stats \
-        "${DRY_RUN[@]}" \
-        -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+    if ! ejecutar_rsync_con_reintentos \
         "$SOURCE_DIR" \
-        "$RSYNC_DESTINATION"
+        "$RSYNC_DESTINATION" \
+        "$FOLDER"
+    then
+        mostrar_error "Fallaron los $MAX_RETRIES intentos de copia para $FOLDER"
+    fi
 
     echo
 done
