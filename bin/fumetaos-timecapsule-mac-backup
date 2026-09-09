@@ -16,6 +16,7 @@ MAC_HOST="192.168.1.5"
 MAC_ROOT="/Users/fumetasing/FumetaOS-Server"
 MAC_DESTINATION="$MAC_ROOT/TimeCapsule/Multimedia"
 MAC_USB_MOUNT="/Volumes/Data USB"
+
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
 DELETE_LIMIT=20
 MAX_RETRIES=3
@@ -30,45 +31,27 @@ DRY_RUN=()
 ALLOW_LARGE_DELETE=0
 CURRENT_STEP="Preparación"
 
-enviar_telegram()
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/../core/mac-mirror-common.sh"
+
+mostrar_error()
 {
-    local message="$1"
-
-    if [ ! -x "$TELEGRAM_NOTIFY" ]; then
-        echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
-        return 0
-    fi
-
-    if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
-        echo "⚠️ No se pudo enviar la notificación de Telegram"
-    fi
+    echo "❌ $1"
+    exit 20
 }
 
 notificar_error()
 {
     local status="$1"
-    local detail="$2"
 
-    [ "${#DRY_RUN[@]}" -eq 0 ] || return 0
+    mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
 
-    enviar_telegram "🔴 FumetaOS ERROR
-
-Copia de Time Capsule al Mac fallida
+La copia de Time Capsule al Mac ha fallado.
 
 Paso: $CURRENT_STEP
-Detalle: $detail
 Código: $status
 
 ⏱️ $(date '+%d/%m/%Y %H:%M')"
-}
-
-mostrar_error()
-{
-    local message="$1"
-
-    echo "❌ $message"
-    notificar_error 20 "$message"
-    exit 20
 }
 
 manejar_error()
@@ -78,141 +61,50 @@ manejar_error()
     trap - ERR
 
     echo
-    echo "🔴 La copia de Time Capsule ha fallado en: $CURRENT_STEP"
+    echo "🔴 La copia de Time Capsule al Mac ha fallado en: $CURRENT_STEP"
 
-    notificar_error "$status" "El comando no terminó correctamente"
+    notificar_error "$status"
 
     exit "$status"
 }
 
-comprobar_usb_mac()
-{
-    if ! "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        /bin/sh -s <<'REMOTE'
-ROOT="/Users/fumetasing/FumetaOS-Server"
-EXPECTED_MOUNT="/Volumes/Data USB"
-MINIMUM_FREE_KB=52428800
-
-punto_montaje()
-{
-    df -P "$1" |
-        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
-}
-
-[ -d "$ROOT" ] || exit 20
-
-MOUNT_POINT=$(punto_montaje "$ROOT") || exit 20
-[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || exit 20
-
-[ -r "$ROOT" ] && [ -w "$ROOT" ] && [ -x "$ROOT" ] || exit 20
-
-AVAILABLE_KB=$(df -kP "$ROOT" |
-    awk 'NR == 2 { print $4 }')
-
-case "$AVAILABLE_KB" in
-    ""|*[!0-9]*)
-        exit 20
-        ;;
-esac
-
-[ "$AVAILABLE_KB" -ge "$MINIMUM_FREE_KB" ] || exit 20
-REMOTE
-    then
-        mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
-    fi
-}
-
 preparar_destinos_mac()
 {
-    if ! "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        /bin/sh -s <<'REMOTE'
-ROOT="/Users/fumetasing/FumetaOS-Server"
-TARGET="/Users/fumetasing/FumetaOS-Server/TimeCapsule/Multimedia"
-EXPECTED_MOUNT="/Volumes/Data USB"
+    local folder
+    local remote_script
 
-punto_montaje()
-{
-    df -P "$1" |
-        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
-}
+    remote_script="$(
+        {
+            printf 'DESTINATION=%q\n' "$MAC_DESTINATION"
 
-[ -d "$ROOT" ] || exit 20
+            for folder in "${FOLDERS[@]}"
+            do
+                printf 'mkdir -p %q\n' "$MAC_DESTINATION/$folder"
+            done
 
-MOUNT_POINT=$(punto_montaje "$ROOT") || exit 20
-[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || exit 20
-
-mkdir -p \
-    "$TARGET/AVANTIS" \
-    "$TARGET/Nenas" \
-    "$TARGET/Peliculas" \
-    "$TARGET/Series"
-
-for DIRECTORY in \
-    "$TARGET/AVANTIS" \
-    "$TARGET/Nenas" \
-    "$TARGET/Peliculas" \
-    "$TARGET/Series"
-do
-    [ -d "$DIRECTORY" ] || exit 20
-
-    DIRECTORY_MOUNT=$(punto_montaje "$DIRECTORY") || exit 20
-    [ "$DIRECTORY_MOUNT" = "$EXPECTED_MOUNT" ] || exit 20
-done
+            cat <<'REMOTE'
+mkdir -p "$DESTINATION"
 REMOTE
-    then
-        mostrar_error "No se pudo preparar Multimedia en el USB correcto del Mac"
-    fi
+        }
+    )"
+
+    "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        /bin/sh -s <<<"$remote_script" ||
+        mostrar_error "No se pudieron preparar los destinos en el Mac"
 }
 
 validar_destinos_mac()
 {
-    if ! "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        /bin/sh -s <<'REMOTE'
-TARGET="/Users/fumetasing/FumetaOS-Server/TimeCapsule/Multimedia"
-EXPECTED_MOUNT="/Volumes/Data USB"
+    local folder
 
-punto_montaje()
-{
-    df -P "$1" |
-        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
-}
-
-for DIRECTORY in \
-    "$TARGET/AVANTIS" \
-    "$TARGET/Nenas" \
-    "$TARGET/Peliculas" \
-    "$TARGET/Series"
-do
-    [ -d "$DIRECTORY" ] || exit 20
-
-    MOUNT_POINT=$(punto_montaje "$DIRECTORY") || exit 20
-    [ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || exit 20
-done
-REMOTE
-    then
-        mostrar_error "Falta alguna carpeta de Multimedia en el USB correcto del Mac"
-    fi
-}
-
-preparar_directorios_destino()
-{
-    local source_dir="$1"
-    local destination_dir="$2"
-
-    if ! find "$source_dir" -type d -printf '%P\n' |
+    for folder in "${FOLDERS[@]}"
+    do
         "${SSH_COMMAND[@]}" \
             "$MAC_USER@$MAC_HOST" \
-            "while IFS= read -r RELATIVE
-            do
-                [ -z \"\$RELATIVE\" ] ||
-                    mkdir -p '$destination_dir'/\"\$RELATIVE\"
-            done"
-    then
-        mostrar_error "No se pudo preparar la estructura de carpetas en el Mac"
-    fi
+            "test -d '$MAC_DESTINATION/$folder'" ||
+            mostrar_error "No existe el destino en el Mac: $MAC_DESTINATION/$folder"
+    done
 }
 
 comprobar_borrados_previstos()
@@ -220,16 +112,9 @@ comprobar_borrados_previstos()
     local source_dir="$1"
     local rsync_destination="$2"
     local folder="$3"
-    local delete_count
+    local deletes
 
-    [ "$ALLOW_LARGE_DELETE" -eq 0 ] || {
-        echo "⚠️ Freno de borrados omitido manualmente para: $folder"
-        return
-    }
-
-    CURRENT_STEP="Comprobación de borrados en $folder"
-
-    if ! delete_count=$(
+    deletes="$(
         rsync \
             -aH \
             --no-owner \
@@ -242,23 +127,12 @@ comprobar_borrados_previstos()
             "$source_dir" \
             "$rsync_destination" |
             awk '$0 == "*deleting" { count++ } END { print count + 0 }'
-    )
-    then
-        mostrar_error "No se pudo comprobar los borrados previstos en $folder"
-    fi
+    )"
 
-    case "$delete_count" in
-        ""|*[!0-9]*)
-            mostrar_error "No se pudo interpretar los borrados previstos en $folder"
-            ;;
-    esac
-
-    if [ "$delete_count" -gt "$DELETE_LIMIT" ]; then
-        mostrar_error "Se cancelarían $delete_count borrados en $folder; límite automático: $DELETE_LIMIT"
-    fi
-
-    if [ "$delete_count" -gt 0 ]; then
-        echo "🛡️ Borrados previstos en $folder: $delete_count/$DELETE_LIMIT"
+    if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
+        echo "❌ Se cancelarían $deletes borrados en $folder; límite: $DELETE_LIMIT"
+        echo "ℹ️ Revisa el origen y el destino antes de usar --allow-large-delete"
+        exit 20
     fi
 }
 
@@ -273,10 +147,14 @@ ejecutar_rsync_con_reintentos()
     while [ "$attempt" -le "$MAX_RETRIES" ]
     do
         CURRENT_STEP="Validación del USB antes del intento $attempt de $folder"
-        comprobar_usb_mac
+
+        mac_mirror_usb_disponible ||
+            mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+
         validar_destinos_mac
 
         CURRENT_STEP="Copia de $folder"
+
         echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
 
         if rsync \
@@ -295,10 +173,10 @@ ejecutar_rsync_con_reintentos()
             return 0
         fi
 
-        status=$?
+        status="$?"
 
         if [ "$attempt" -lt "$MAX_RETRIES" ]; then
-            echo "⚠️ Falló $folder con código $status; reintentando en $RETRY_DELAY segundos"
+            echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de $folder. Reintentando en $RETRY_DELAY segundos..."
             sleep "$RETRY_DELAY"
         fi
 
@@ -326,19 +204,15 @@ case "${1:-}" in
         ;;
 esac
 
-trap manejar_error ERR
-
 [ "$(id -u)" -eq 0 ] ||
     mostrar_error "Esta copia debe ejecutarse como root"
 
-mountpoint -q /DATA/TimeCapsule ||
-    mostrar_error "/DATA/TimeCapsule no está montado"
+[ -d "$SOURCE_BASE" ] ||
+    mostrar_error "No existe el origen: $SOURCE_BASE"
 
-for FOLDER in "${FOLDERS[@]}"
-do
-    [ -d "$SOURCE_BASE/$FOLDER" ] ||
-        mostrar_error "No existe el origen: $SOURCE_BASE/$FOLDER"
-done
+findmnt -T "$SOURCE_BASE" -no FSTYPE |
+    grep -q '^fuse\.' ||
+    mostrar_error "Time Capsule no está montada correctamente"
 
 [ -r "$SSH_KEY" ] ||
     mostrar_error "No existe la clave SSH: $SSH_KEY"
@@ -351,69 +225,61 @@ exec 9>"$LOCK_FILE"
 flock -n 9 ||
     mostrar_error "Ya hay una copia al Mac en curso"
 
-SSH_COMMAND=(
-    ssh
-    -i "$SSH_KEY"
-    -o BatchMode=yes
-    -o ConnectTimeout=20
-    -o ServerAliveInterval=30
-    -o ServerAliveCountMax=6
-    -o "UserKnownHostsFile=$SSH_KNOWN_HOSTS"
-    -o StrictHostKeyChecking=yes
-)
+mac_mirror_crear_ssh_command
 
-CURRENT_STEP="Comprobación del Mac y del disco USB"
-comprobar_usb_mac
-
-if [ "${#DRY_RUN[@]}" -gt 0 ]; then
-    validar_destinos_mac
-else
-    CURRENT_STEP="Preparación de los destinos en el USB del Mac"
-    preparar_destinos_mac
-fi
+trap manejar_error ERR
 
 echo "💾 Copia espejo de Time Capsule al Mac"
 echo "📍 Origen: $SOURCE_BASE"
 echo "📍 Destino: $MAC_DESTINATION"
-echo "💾 USB validado: $MAC_USB_MOUNT"
+echo "💾 Time Capsule validada"
 echo "🛡️ Límite automático de borrados: $DELETE_LIMIT por carpeta"
 echo "🔄 Reintentos por carpeta: $MAX_RETRIES"
 echo
 
-for FOLDER in "${FOLDERS[@]}"
+CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
+
+mac_mirror_usb_disponible ||
+    mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+
+if [ "${#DRY_RUN[@]}" -gt 0 ]; then
+    validar_destinos_mac
+else
+    CURRENT_STEP="Preparación de destinos en el Mac"
+    preparar_destinos_mac
+fi
+
+for folder in "${FOLDERS[@]}"
 do
-    SOURCE_DIR="$SOURCE_BASE/$FOLDER/"
-    DESTINATION_DIR="$MAC_DESTINATION/$FOLDER"
-    RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$DESTINATION_DIR/"
+    source_dir="$SOURCE_BASE/$folder/"
+    destination_dir="$MAC_DESTINATION/$folder"
+    rsync_destination="$MAC_USER@$MAC_HOST:$destination_dir/"
 
-    CURRENT_STEP="Copia de $FOLDER"
-    echo "📁 Copiando: $FOLDER"
-
-    if [ "${#DRY_RUN[@]}" -eq 0 ]; then
-        preparar_directorios_destino \
-            "$SOURCE_DIR" \
-            "$DESTINATION_DIR"
-
-        comprobar_borrados_previstos \
-            "$SOURCE_DIR" \
-            "$RSYNC_DESTINATION" \
-            "$FOLDER"
-
-        CURRENT_STEP="Copia de $FOLDER"
-    fi
-
-    if ! ejecutar_rsync_con_reintentos \
-        "$SOURCE_DIR" \
-        "$RSYNC_DESTINATION" \
-        "$FOLDER"
-    then
-        mostrar_error "Fallaron los $MAX_RETRIES intentos de copia para $FOLDER"
-    fi
+    [ -d "$source_dir" ] ||
+        mostrar_error "No existe la carpeta de origen: $source_dir"
 
     echo
+    echo "📁 Copiando: $folder"
+
+    if [ "${#DRY_RUN[@]}" -eq 0 ] &&
+       [ "$ALLOW_LARGE_DELETE" -eq 0 ]
+    then
+        CURRENT_STEP="Comprobación de borrados de $folder"
+        comprobar_borrados_previstos \
+            "$source_dir" \
+            "$rsync_destination" \
+            "$folder"
+    fi
+
+    ejecutar_rsync_con_reintentos \
+        "$source_dir" \
+        "$rsync_destination" \
+        "$folder"
 done
 
 trap - ERR
+
+echo
 
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
     echo "✅ Simulación completada: no se ha copiado ni borrado nada"
