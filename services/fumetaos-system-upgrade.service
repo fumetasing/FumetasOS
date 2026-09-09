@@ -1,5 +1,5 @@
 [Unit]
-Description=Actualización semanal completa de Ubuntu
+Description=Actualización diaria completa de Ubuntu
 After=network-online.target apt-daily.service apt-daily-upgrade.service fumetaos-recovery-backup.service
 Wants=network-online.target
 RequiresMountsFor=/mnt/datos

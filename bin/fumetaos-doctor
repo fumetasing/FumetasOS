@@ -39,11 +39,11 @@ mac_backup_after_timecapsule()
         grep -qx 'OnSuccess=fumetaos-mac-backup.service'
 }
 
-weekly_upgrade_timer()
+daily_upgrade_timer()
 {
     systemctl is-active --quiet fumetaos-system-upgrade.timer &&
         systemctl cat fumetaos-system-upgrade.timer 2>/dev/null |
-            grep -Fqx 'OnCalendar=Sun *-*-* 05:30:00'
+            grep -Fqx 'OnCalendar=*-*-* 05:30:00'
 }
 
 echo
@@ -91,7 +91,7 @@ do
 done
 
 check "Copia al Mac encadenada" mac_backup_after_timecapsule
-check "Actualización Ubuntu semanal (domingo 05:30)" weekly_upgrade_timer
+check "Actualización Ubuntu diaria (05:30)" daily_upgrade_timer
 
 echo
 echo "📦 Aplicaciones"

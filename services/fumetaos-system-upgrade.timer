@@ -1,8 +1,8 @@
 [Unit]
-Description=Ejecutar actualización completa de Ubuntu cada domingo a las 05:30
+Description=Ejecutar actualización completa de Ubuntu cada día a las 05:30
 
 [Timer]
-OnCalendar=Sun *-*-* 05:30:00
+OnCalendar=*-*-* 05:30:00
 Persistent=false
 
 [Install]
