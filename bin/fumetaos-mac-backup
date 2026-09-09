@@ -3,9 +3,13 @@
 set -euo pipefail
 
 SOURCE_DIR="/mnt/datos/"
+
 MAC_USER="fumetasing"
 MAC_HOST="192.168.1.5"
 MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server"
+MAC_USB_MOUNT="/Volumes/Data USB"
+MINIMUM_FREE_KB=$((50 * 1024 * 1024))
+
 SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
 SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
@@ -69,6 +73,58 @@ manejar_error()
     exit "$status"
 }
 
+comprobar_usb_mac()
+{
+    if ! "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        /bin/sh -s <<'REMOTE'
+ROOT="/Users/fumetasing/FumetaOS-Server"
+EXPECTED_MOUNT="/Volumes/Data USB"
+MINIMUM_FREE_KB=52428800
+
+punto_montaje()
+{
+    df -P "$1" |
+        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
+}
+
+[ -d "$ROOT" ] || {
+    echo "No existe el destino: $ROOT" >&2
+    exit 20
+}
+
+MOUNT_POINT=$(punto_montaje "$ROOT") || exit 20
+
+[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || {
+    echo "El destino está en $MOUNT_POINT; se esperaba $EXPECTED_MOUNT" >&2
+    exit 20
+}
+
+[ -r "$ROOT" ] && [ -w "$ROOT" ] && [ -x "$ROOT" ] || {
+    echo "Sin permisos suficientes en el USB del Mac" >&2
+    exit 20
+}
+
+AVAILABLE_KB=$(df -kP "$ROOT" |
+    awk 'NR == 2 { print $4 }')
+
+case "$AVAILABLE_KB" in
+    ""|*[!0-9]*)
+        echo "No se pudo conocer el espacio libre del USB" >&2
+        exit 20
+        ;;
+esac
+
+[ "$AVAILABLE_KB" -ge "$MINIMUM_FREE_KB" ] || {
+    echo "Menos de 50 GiB libres en el USB del Mac" >&2
+    exit 20
+}
+REMOTE
+    then
+        mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+    fi
+}
+
 case "${1:-}" in
     "")
         ;;
@@ -116,16 +172,13 @@ SSH_COMMAND=(
     -o StrictHostKeyChecking=yes
 )
 
+CURRENT_STEP="Comprobación del Mac y del disco USB"
+comprobar_usb_mac
+
 echo "💾 Copia espejo de /mnt/datos al Mac"
 echo "📍 Destino: $MAC_DESTINATION"
+echo "💾 USB validado: $MAC_USB_MOUNT"
 echo
-
-CURRENT_STEP="Comprobación del Mac y del disco USB"
-
-"${SSH_COMMAND[@]}" \
-    "$MAC_USER@$MAC_HOST" \
-    "test -d '$MAC_DESTINATION'" ||
-    mostrar_error "El Mac o el disco USB no están disponibles"
 
 RSYNC_DESTINATION="$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"
 

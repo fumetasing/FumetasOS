@@ -3,6 +3,7 @@
 set -euo pipefail
 
 SOURCE_BASE="/DATA/TimeCapsule/Multimedia"
+
 FOLDERS=(
     AVANTIS
     Nenas
@@ -12,7 +13,11 @@ FOLDERS=(
 
 MAC_USER="fumetasing"
 MAC_HOST="192.168.1.5"
-MAC_DESTINATION="/Users/fumetasing/FumetaOS-Server/TimeCapsule/Multimedia"
+MAC_ROOT="/Users/fumetasing/FumetaOS-Server"
+MAC_DESTINATION="$MAC_ROOT/TimeCapsule/Multimedia"
+MAC_USB_MOUNT="/Volumes/Data USB"
+MINIMUM_FREE_KB=$((50 * 1024 * 1024))
+
 SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
 SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
@@ -74,6 +79,138 @@ manejar_error()
     notificar_error "$status" "El comando no terminó correctamente"
 
     exit "$status"
+}
+
+punto_montaje_mac()
+{
+    df -P "$1" |
+        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
+}
+
+comprobar_usb_mac()
+{
+    if ! "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        /bin/sh -s <<'REMOTE'
+ROOT="/Users/fumetasing/FumetaOS-Server"
+EXPECTED_MOUNT="/Volumes/Data USB"
+MINIMUM_FREE_KB=52428800
+
+punto_montaje()
+{
+    df -P "$1" |
+        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
+}
+
+[ -d "$ROOT" ] || {
+    echo "No existe el destino: $ROOT" >&2
+    exit 20
+}
+
+MOUNT_POINT=$(punto_montaje "$ROOT") || exit 20
+
+[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || {
+    echo "El destino está en $MOUNT_POINT; se esperaba $EXPECTED_MOUNT" >&2
+    exit 20
+}
+
+[ -r "$ROOT" ] && [ -w "$ROOT" ] && [ -x "$ROOT" ] || {
+    echo "Sin permisos suficientes en el USB del Mac" >&2
+    exit 20
+}
+
+AVAILABLE_KB=$(df -kP "$ROOT" |
+    awk 'NR == 2 { print $4 }')
+
+case "$AVAILABLE_KB" in
+    ""|*[!0-9]*)
+        echo "No se pudo conocer el espacio libre del USB" >&2
+        exit 20
+        ;;
+esac
+
+[ "$AVAILABLE_KB" -ge "$MINIMUM_FREE_KB" ] || {
+    echo "Menos de 50 GiB libres en el USB del Mac" >&2
+    exit 20
+}
+REMOTE
+    then
+        mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+    fi
+}
+
+preparar_destinos_mac()
+{
+    if ! "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        /bin/sh -s <<'REMOTE'
+ROOT="/Users/fumetasing/FumetaOS-Server"
+TARGET="/Users/fumetasing/FumetaOS-Server/TimeCapsule/Multimedia"
+EXPECTED_MOUNT="/Volumes/Data USB"
+
+punto_montaje()
+{
+    df -P "$1" |
+        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
+}
+
+[ -d "$ROOT" ] || exit 20
+
+MOUNT_POINT=$(punto_montaje "$ROOT") || exit 20
+[ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || exit 20
+
+mkdir -p \
+    "$TARGET/AVANTIS" \
+    "$TARGET/Nenas" \
+    "$TARGET/Peliculas" \
+    "$TARGET/Series"
+
+for DIRECTORY in \
+    "$TARGET/AVANTIS" \
+    "$TARGET/Nenas" \
+    "$TARGET/Peliculas" \
+    "$TARGET/Series"
+do
+    [ -d "$DIRECTORY" ] || exit 20
+
+    DIRECTORY_MOUNT=$(punto_montaje "$DIRECTORY") || exit 20
+    [ "$DIRECTORY_MOUNT" = "$EXPECTED_MOUNT" ] || exit 20
+done
+REMOTE
+    then
+        mostrar_error "No se pudo preparar Multimedia en el USB correcto del Mac"
+    fi
+}
+
+validar_destinos_mac()
+{
+    if ! "${SSH_COMMAND[@]}" \
+        "$MAC_USER@$MAC_HOST" \
+        /bin/sh -s <<'REMOTE'
+TARGET="/Users/fumetasing/FumetaOS-Server/TimeCapsule/Multimedia"
+EXPECTED_MOUNT="/Volumes/Data USB"
+
+punto_montaje()
+{
+    df -P "$1" |
+        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
+}
+
+for DIRECTORY in \
+    "$TARGET/AVANTIS" \
+    "$TARGET/Nenas" \
+    "$TARGET/Peliculas" \
+    "$TARGET/Series"
+do
+    [ -d "$DIRECTORY" ] || exit 20
+
+    MOUNT_POINT=$(punto_montaje "$DIRECTORY") || exit 20
+    [ "$MOUNT_POINT" = "$EXPECTED_MOUNT" ] || exit 20
+done
+REMOTE
+    then
+        mostrar_error "Falta alguna carpeta de Multimedia en el USB correcto del Mac"
+    fi
 }
 
 preparar_directorios_destino()
@@ -144,41 +281,20 @@ SSH_COMMAND=(
     -o StrictHostKeyChecking=yes
 )
 
-REMOTE_DESTINATIONS_COMMAND="mkdir -p"
-
-for FOLDER in "${FOLDERS[@]}"
-do
-    REMOTE_DESTINATIONS_COMMAND+=" '$MAC_DESTINATION/$FOLDER'"
-done
-
 CURRENT_STEP="Comprobación del Mac y del disco USB"
+comprobar_usb_mac
 
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
-    REMOTE_CHECK_COMMAND=""
-
-    for FOLDER in "${FOLDERS[@]}"
-    do
-        if [ -n "$REMOTE_CHECK_COMMAND" ]; then
-            REMOTE_CHECK_COMMAND+=" && "
-        fi
-
-        REMOTE_CHECK_COMMAND+="test -d '$MAC_DESTINATION/$FOLDER'"
-    done
-
-    "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        "$REMOTE_CHECK_COMMAND" ||
-        mostrar_error "Falta alguna carpeta de Multimedia en el disco USB del Mac"
+    validar_destinos_mac
 else
-    "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        "$REMOTE_DESTINATIONS_COMMAND" ||
-        mostrar_error "El Mac o el disco USB no están disponibles"
+    CURRENT_STEP="Preparación de los destinos en el USB del Mac"
+    preparar_destinos_mac
 fi
 
 echo "💾 Copia espejo de Time Capsule al Mac"
 echo "📍 Origen: $SOURCE_BASE"
 echo "📍 Destino: $MAC_DESTINATION"
+echo "💾 USB validado: $MAC_USB_MOUNT"
 echo
 
 for FOLDER in "${FOLDERS[@]}"
