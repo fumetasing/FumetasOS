@@ -169,6 +169,10 @@ ejecutar_rsync_con_reintentos()
 
     while [ "$attempt" -le "$MAX_RETRIES" ]
     do
+        CURRENT_STEP="Validación del USB antes del intento $attempt de datos"
+        comprobar_usb_mac
+
+        CURRENT_STEP="Copia espejo de /mnt/datos"
         echo "🔄 Intento $attempt/$MAX_RETRIES: datos"
 
         if rsync \

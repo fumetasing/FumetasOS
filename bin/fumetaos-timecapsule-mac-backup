@@ -272,6 +272,11 @@ ejecutar_rsync_con_reintentos()
 
     while [ "$attempt" -le "$MAX_RETRIES" ]
     do
+        CURRENT_STEP="Validación del USB antes del intento $attempt de $folder"
+        comprobar_usb_mac
+        validar_destinos_mac
+
+        CURRENT_STEP="Copia de $folder"
         echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
 
         if rsync \
