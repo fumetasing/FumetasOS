@@ -9,54 +9,48 @@ TOTAL=0
 PACKAGE_DIR="/opt/fumetaos/install/package"
 
 if [ -d "$INSTALL_DIR/package" ]; then
-    PACKAGE_DIR="$INSTALL_DIR/package"
+	PACKAGE_DIR="$INSTALL_DIR/package"
 fi
 
-check()
-{
-    DESCRIPCION="$1"
-    shift
+check() {
+	DESCRIPCION="$1"
+	shift
 
-    TOTAL=$((TOTAL + 1))
+	TOTAL=$((TOTAL + 1))
 
-    if "$@"
-    then
-        echo "✅ $DESCRIPCION"
-        PUNTOS=$((PUNTOS + 1))
-    else
-        echo "❌ $DESCRIPCION"
-    fi
+	if "$@"; then
+		echo "✅ $DESCRIPCION"
+		PUNTOS=$((PUNTOS + 1))
+	else
+		echo "❌ $DESCRIPCION"
+	fi
 }
 
-firewall_active()
-{
-    sudo ufw status 2>/dev/null |
-        grep -q "Status: active"
+firewall_active() {
+	sudo ufw status 2>/dev/null |
+		grep -q "Status: active"
 }
 
-mac_backup_after_timecapsule()
-{
-    systemctl cat fumetaos-timecapsule-mac-backup.service 2>/dev/null |
-        grep -qx 'OnSuccess=fumetaos-mac-backup.service'
+mac_backup_after_timecapsule() {
+	systemctl cat fumetaos-timecapsule-mac-backup.service 2>/dev/null |
+		grep -qx 'OnSuccess=fumetaos-mac-backup.service'
 }
 
-daily_upgrade_timer()
-{
-    systemctl is-active --quiet fumetaos-system-upgrade.timer &&
-        systemctl cat fumetaos-system-upgrade.timer 2>/dev/null |
-            grep -Fqx 'OnCalendar=*-*-* 05:30:00'
+daily_upgrade_timer() {
+	systemctl is-active --quiet fumetaos-system-upgrade.timer &&
+		systemctl cat fumetaos-system-upgrade.timer 2>/dev/null |
+		grep -Fqx 'OnCalendar=*-*-* 05:30:00'
 }
 
-backup_disponible()
-{
-    find /mnt/datos/backups/fumetaos \
-        -maxdepth 1 \
-        -type f \
-        -name 'fumetaos-backup-*' \
-        -print \
-        -quit \
-        2>/dev/null |
-        grep -q .
+backup_disponible() {
+	find /mnt/datos/backups/fumetaos \
+		-maxdepth 1 \
+		-type f \
+		-name 'fumetaos-backup-*' \
+		-print \
+		-quit \
+		2>/dev/null |
+		grep -q .
 }
 
 echo
@@ -98,9 +92,8 @@ echo
 echo "⏱️ Timers FumetaOS"
 echo
 
-for TIMER in $FUMETAOS_TIMERS
-do
-    check "$TIMER" systemctl is-active --quiet "$TIMER"
+for TIMER in $FUMETAOS_TIMERS; do
+	check "$TIMER" systemctl is-active --quiet "$TIMER"
 done
 
 check "Copia al Mac encadenada" mac_backup_after_timecapsule
@@ -110,19 +103,17 @@ echo
 echo "📦 Aplicaciones"
 echo
 
-for APP in $(app_list)
-do
-    app_load "$APP"
+for APP in $(app_list); do
+	app_load "$APP"
 
-    TOTAL=$((TOTAL + 1))
+	TOTAL=$((TOTAL + 1))
 
-    if app_running
-    then
-        echo "✅ $APP_NAME"
-        PUNTOS=$((PUNTOS + 1))
-    else
-        echo "❌ $APP_NAME"
-    fi
+	if app_running; then
+		echo "✅ $APP_NAME"
+		PUNTOS=$((PUNTOS + 1))
+	else
+		echo "❌ $APP_NAME"
+	fi
 done
 
 echo

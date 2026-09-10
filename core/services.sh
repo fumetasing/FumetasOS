@@ -9,116 +9,96 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-
-
 ###########################################################
 # Estado servicio
 ###########################################################
 
-service_state()
-{
+service_state() {
 
-SERVICE="$1"
+	SERVICE="$1"
 
-if systemctl is-active --quiet "$SERVICE"
-then
+	if systemctl is-active --quiet "$SERVICE"; then
 
-    echo "active"
+		echo "active"
 
-else
+	else
 
-    echo "inactive"
+		echo "inactive"
 
-fi
+	fi
 
 }
-
-
 
 ###########################################################
 # Estado timer
 ###########################################################
 
-timer_state()
-{
+timer_state() {
 
-TIMER="$1"
+	TIMER="$1"
 
-if systemctl is-active --quiet "$TIMER"
-then
+	if systemctl is-active --quiet "$TIMER"; then
 
-    echo "active"
+		echo "active"
 
-else
+	else
 
-    echo "inactive"
+		echo "inactive"
 
-fi
+	fi
 
 }
-
-
 
 ###########################################################
 # Mostrar servicios
 ###########################################################
 
-services_show()
-{
+services_show() {
 
-echo
-echo "⚙️ Servicios FumetaOS"
-echo
+	echo
+	echo "⚙️ Servicios FumetaOS"
+	echo
 
+	echo "⏱️ Timers"
+	echo "─────────"
 
-echo "⏱️ Timers"
-echo "─────────"
+	for TIMER in $FUMETAOS_TIMERS; do
 
+		STATE=$(timer_state "$TIMER")
 
-for TIMER in $FUMETAOS_TIMERS
-do
+		if [ "$STATE" = "active" ]; then
 
-    STATE=$(timer_state "$TIMER")
+			echo "🟢 $TIMER"
 
-    if [ "$STATE" = "active" ]
-    then
+		else
 
-        echo "🟢 $TIMER"
+			echo "🔴 $TIMER"
 
-    else
+		fi
 
-        echo "🔴 $TIMER"
+	done
 
-    fi
+	echo
 
-done
+	echo "🛠️ Sistema"
+	echo "──────────"
 
+	for SERVICE in $SYSTEM_SERVICES; do
 
-echo
+		STATE=$(service_state "$SERVICE")
 
-echo "🛠️ Sistema"
-echo "──────────"
+		if [ "$STATE" = "active" ]; then
 
+			echo "🟢 $SERVICE"
 
-for SERVICE in $SYSTEM_SERVICES
-do
+		else
 
-    STATE=$(service_state "$SERVICE")
+			echo "🔴 $SERVICE"
 
-    if [ "$STATE" = "active" ]
-    then
+		fi
 
-        echo "🟢 $SERVICE"
+	done
 
-    else
-
-        echo "🔴 $SERVICE"
-
-    fi
-
-done
-
-
-echo
+	echo
 
 }

@@ -10,331 +10,274 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+app_list() {
 
-app_list()
-{
+	for APP in "$APPS_DIR"/*; do
 
-for APP in "$APPS_DIR"/*
-do
+		[ -d "$APP" ] || continue
+		[ -f "$APP/app.conf" ] || continue
 
-    [ -d "$APP" ] || continue
-    [ -f "$APP/app.conf" ] || continue
+		echo "$APP"
 
-    echo "$APP"
-
-done
+	done
 
 }
 
+app_find() {
 
-app_find()
-{
+	SEARCH_ID="$1"
 
-SEARCH_ID="$1"
+	for APP in $(app_list); do
 
-for APP in $(app_list)
-do
+		source "$APP/app.conf"
 
-    source "$APP/app.conf"
+		if [ "$APP_ID" = "$SEARCH_ID" ]; then
 
-    if [ "$APP_ID" = "$SEARCH_ID" ]; then
+			echo "$APP"
+			return 0
 
-        echo "$APP"
-        return 0
+		fi
 
-    fi
+	done
 
-done
-
-return 1
+	return 1
 
 }
 
+app_load() {
 
-app_load()
-{
+	APP_PATH="$1"
 
-APP_PATH="$1"
+	[ -f "$APP_PATH/app.conf" ] || return 1
 
-[ -f "$APP_PATH/app.conf" ] || return 1
+	unset APP_ID
+	unset APP_NAME
+	unset APP_DESCRIPTION
+	unset APP_CATEGORY
+	unset APP_ICON
+	unset APP_ICON_URL
 
+	unset APP_TYPE
+	unset APP_IMAGE
+	unset APP_TAG
+	unset APP_CONTAINER
 
-unset APP_ID
-unset APP_NAME
-unset APP_DESCRIPTION
-unset APP_CATEGORY
-unset APP_ICON
-unset APP_ICON_URL
+	unset APP_INDEX
+	unset APP_PORT
+	unset APP_PORT_MAP
+	unset APP_PORTS
+	unset APP_URL
+	unset APP_WEBUI
 
-unset APP_TYPE
-unset APP_IMAGE
-unset APP_TAG
-unset APP_CONTAINER
+	unset APP_HEALTH
 
-unset APP_INDEX
-unset APP_PORT
-unset APP_PORT_MAP
-unset APP_PORTS
-unset APP_URL
-unset APP_WEBUI
+	unset APP_COMPOSE
+	unset APP_DATA
+	unset APP_ENV
+	unset APP_VOLUMES
 
-unset APP_HEALTH
+	unset APP_VERSION
+	unset APP_AUTHOR
 
-unset APP_COMPOSE
-unset APP_DATA
-unset APP_ENV
-unset APP_VOLUMES
-
-unset APP_VERSION
-unset APP_AUTHOR
-
-
-source "$APP_PATH/app.conf"
+	source "$APP_PATH/app.conf"
 
 }
 
+app_container() {
 
-app_container()
-{
+	if [ -n "$APP_CONTAINER" ]; then
 
-if [ -n "$APP_CONTAINER" ]; then
+		echo "$APP_CONTAINER"
 
-    echo "$APP_CONTAINER"
+	else
 
-else
+		echo "$APP_ID"
 
-    echo "$APP_ID"
-
-fi
+	fi
 
 }
 
+app_description() {
 
-app_description()
-{
-
-echo "$APP_DESCRIPTION"
+	echo "$APP_DESCRIPTION"
 
 }
 
+app_category() {
 
-app_category()
-{
-
-echo "$APP_CATEGORY"
+	echo "$APP_CATEGORY"
 
 }
 
+app_icon() {
 
-app_icon()
-{
-
-echo "$APP_ICON"
+	echo "$APP_ICON"
 
 }
 
+app_url() {
 
-app_url()
-{
-
-echo "$APP_URL"
+	echo "$APP_URL"
 
 }
 
+app_webui() {
 
-app_webui()
-{
-
-echo "$APP_WEBUI"
+	echo "$APP_WEBUI"
 
 }
 
+app_report_url() {
 
-app_report_url()
-{
+	if [ -n "$APP_URL" ]; then
 
-if [ -n "$APP_URL" ]; then
+		echo "$APP_URL"
 
-    echo "$APP_URL"
+	elif [ -n "$APP_WEBUI" ]; then
 
-elif [ -n "$APP_WEBUI" ]; then
+		echo "${APP_WEBUI//[IP]/localhost}"
 
-    echo "${APP_WEBUI//[IP]/localhost}"
-
-fi
+	fi
 
 }
 
+app_author() {
 
-app_author()
-{
-
-echo "$APP_AUTHOR"
+	echo "$APP_AUTHOR"
 
 }
 
+app_running() {
 
-app_running()
-{
+	CONTAINER=$(app_container)
 
-CONTAINER=$(app_container)
-
-docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"
+	docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"
 
 }
-
 
 ############################################################
 # Health de aplicaciones
 ############################################################
 
-app_health()
-{
+app_health() {
 
-CONTAINER=$(app_container)
+	CONTAINER=$(app_container)
 
+	############################################################
+	# Health nativo Docker
+	############################################################
 
-############################################################
-# Health nativo Docker
-############################################################
+	DOCKER_HEALTH=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null)
 
-DOCKER_HEALTH=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null)
+	if [ "$DOCKER_HEALTH" = "healthy" ] || [ "$DOCKER_HEALTH" = "unhealthy" ]; then
 
+		echo "$DOCKER_HEALTH"
+		return
 
-if [ "$DOCKER_HEALTH" = "healthy" ] || [ "$DOCKER_HEALTH" = "unhealthy" ]; then
+	fi
 
-    echo "$DOCKER_HEALTH"
-    return
+	############################################################
+	# Health personalizado Transmission
+	############################################################
 
-fi
+	if [ "$APP_HEALTH" = "transmission" ]; then
 
+		RESPONSE=$(curl -si \
+			http://localhost:9091/transmission/rpc/ 2>/dev/null)
 
-############################################################
-# Health personalizado Transmission
-############################################################
+		STATUS=$(echo "$RESPONSE" | head -1)
 
-if [ "$APP_HEALTH" = "transmission" ]; then
+		if echo "$STATUS" | grep -Eq "200|401|409"; then
 
+			echo "healthy"
 
-    RESPONSE=$(curl -si \
-    http://localhost:9091/transmission/rpc/ 2>/dev/null)
+		else
 
+			echo "unhealthy"
 
-    STATUS=$(echo "$RESPONSE" | head -1)
+		fi
 
+		return
 
-    if echo "$STATUS" | grep -Eq "200|401|409"
-    then
+	fi
 
-        echo "healthy"
+	############################################################
+	# Health HTTP genérico
+	############################################################
 
-    else
+	if [ -n "$APP_HEALTH" ]; then
 
-        echo "unhealthy"
+		if curl -fs "$APP_HEALTH" >/dev/null 2>&1; then
 
-    fi
+			echo "healthy"
 
+		else
 
-    return
+			echo "unhealthy"
 
-fi
+		fi
 
+		return
 
+	fi
 
-############################################################
-# Health HTTP genérico
-############################################################
-
-if [ -n "$APP_HEALTH" ]; then
-
-
-    if curl -fs "$APP_HEALTH" >/dev/null 2>&1
-
-    then
-
-        echo "healthy"
-
-    else
-
-        echo "unhealthy"
-
-    fi
-
-
-    return
-
-fi
-
-
-echo "none"
+	echo "none"
 
 }
 
+app_version() {
 
-app_version()
-{
-
-echo "$APP_VERSION"
+	echo "$APP_VERSION"
 
 }
 
+app_install() {
 
-app_install()
-{
+	APP_PATH="$1"
 
-APP_PATH="$1"
+	app_load "$APP_PATH" || return 1
 
-app_load "$APP_PATH" || return 1
+	if app_running; then
 
+		echo
+		echo "⚠️ $APP_NAME ya está ejecutándose"
+		return 1
 
-if app_running; then
+	fi
 
-    echo
-    echo "⚠️ $APP_NAME ya está ejecutándose"
-    return 1
+	echo
+	echo "📦 Instalando $APP_NAME"
+	echo
 
-fi
+	if [ -z "$APP_COMPOSE" ]; then
 
+		echo "❌ No existe archivo compose para $APP_NAME"
+		return 1
 
-echo
-echo "📦 Instalando $APP_NAME"
-echo
+	fi
 
+	if [ ! -f "$APP_COMPOSE" ]; then
 
-if [ -z "$APP_COMPOSE" ]; then
+		echo "❌ No existe compose: $APP_COMPOSE"
+		return 1
 
-    echo "❌ No existe archivo compose para $APP_NAME"
-    return 1
+	fi
 
-fi
+	mkdir -p "$APP_DATA"
 
+	cd "$APP_DATA" || return 1
 
-if [ ! -f "$APP_COMPOSE" ]; then
+	if docker compose -f "$APP_COMPOSE" up -d; then
 
-    echo "❌ No existe compose: $APP_COMPOSE"
-    return 1
+		echo
+		echo "✅ $APP_NAME instalado"
 
-fi
+	else
 
+		echo
+		echo "❌ Error instalando $APP_NAME"
+		return 1
 
-mkdir -p "$APP_DATA"
-
-
-cd "$APP_DATA" || return 1
-
-
-if docker compose -f "$APP_COMPOSE" up -d
-then
-
-    echo
-    echo "✅ $APP_NAME instalado"
-
-else
-
-    echo
-    echo "❌ Error instalando $APP_NAME"
-    return 1
-
-fi
+	fi
 
 }

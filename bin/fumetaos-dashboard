@@ -10,53 +10,40 @@ source /opt/fumetaos/core/system.sh
 source /opt/fumetaos/core/apps.sh
 source /opt/fumetaos/core/services.sh
 
-
 WIDTH=42
 INNER=40
-
 
 VERSION="desconocida"
 
 if [ -f "$VERSION_FILE" ]; then
-    VERSION=$(cat "$VERSION_FILE")
+	VERSION=$(cat "$VERSION_FILE")
 fi
-
 
 ###########################################################
 # Caja
 ###########################################################
 
-line()
-{
-    printf '═%.0s' $(seq 1 $INNER)
+line() {
+	printf '═%.0s' $(seq 1 $INNER)
 }
 
-
-top()
-{
-    echo "╔$(line)╗"
+top() {
+	echo "╔$(line)╗"
 }
 
-
-bottom()
-{
-    echo "╚$(line)╝"
+bottom() {
+	echo "╚$(line)╝"
 }
 
-
-separator()
-{
-    echo "╠$(line)╣"
+separator() {
+	echo "╠$(line)╣"
 }
 
+box() {
+	TEXT="$1"
 
-box()
-{
-    TEXT="$1"
-
-    printf "║ %-38s ║\n" "$TEXT"
+	printf "║ %-38s ║\n" "$TEXT"
 }
-
 
 ###########################################################
 # Datos
@@ -71,14 +58,11 @@ DATA_DISK=$(disk_usage)
 
 UPDATES=$(updates_available)
 
-
-if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1
-then
-    STATUS="PERFECTO"
+if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1; then
+	STATUS="PERFECTO"
 else
-    STATUS="AVISOS"
+	STATUS="AVISOS"
 fi
-
 
 ###########################################################
 # Render
@@ -86,18 +70,13 @@ fi
 
 top
 
-
 box "FumetaOS v$VERSION"
 
-
 separator
-
 
 box "ESTADO: $STATUS"
 
-
 separator
-
 
 box "RECURSOS"
 
@@ -107,94 +86,66 @@ box "RAM:              ${RAM} %"
 
 box "SISTEMA:          ${SYSTEM_DISK} %"
 
-
-
 separator
-
 
 box "APLICACIONES"
 
+for APP in $(app_list); do
 
-for APP in $(app_list)
-do
+	app_load "$APP"
 
-    app_load "$APP"
+	if app_running; then
+		ICON="[OK]"
+	else
+		ICON="[--]"
+	fi
 
+	box "$ICON $APP_NAME"
 
-    if app_running
-    then
-        ICON="[OK]"
-    else
-        ICON="[--]"
-    fi
+	box "     Version: $APP_VERSION"
 
-
-    box "$ICON $APP_NAME"
-
-    box "     Version: $APP_VERSION"
-
-    box "     Health: $(app_health)"
+	box "     Health: $(app_health)"
 
 done
 
-
-
 separator
-
 
 box "SERVICIOS"
 
-
 box "TIMERS FUMETAOS"
 
+for TIMER in $FUMETAOS_TIMERS; do
 
-for TIMER in $FUMETAOS_TIMERS
-do
-
-    if timer_state "$TIMER" | grep -q active
-    then
-        box "[OK] ${TIMER%.timer}"
-    else
-        box "[--] ${TIMER%.timer}"
-    fi
+	if timer_state "$TIMER" | grep -q active; then
+		box "[OK] ${TIMER%.timer}"
+	else
+		box "[--] ${TIMER%.timer}"
+	fi
 
 done
-
-
 
 box "SISTEMA"
 
+for SERVICE in $SYSTEM_SERVICES; do
 
-for SERVICE in $SYSTEM_SERVICES
-do
-
-    if service_state "$SERVICE" | grep -q active
-    then
-        box "[OK] $SERVICE"
-    else
-        box "[--] $SERVICE"
-    fi
+	if service_state "$SERVICE" | grep -q active; then
+		box "[OK] $SERVICE"
+	else
+		box "[--] $SERVICE"
+	fi
 
 done
 
-
-
 separator
 
-
 box "ALMACENAMIENTO"
-
 
 box "SSD Sistema: ${SYSTEM_DISK} %"
 
 box "HDD Datos:   ${DATA_DISK} %"
 
-
-
 separator
 
-
 box "ACTUALIZACIONES: $UPDATES"
-
 
 bottom

@@ -7,36 +7,33 @@ APT_LOCK_TIMEOUT="1800"
 TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
 CURRENT_STEP="Preparación"
 
-mostrar_error()
-{
-    echo "❌ $1"
-    exit 20
+mostrar_error() {
+	echo "❌ $1"
+	exit 20
 }
 
-enviar_telegram()
-{
-    local message="$1"
+enviar_telegram() {
+	local message="$1"
 
-    if [ ! -x "$TELEGRAM_NOTIFY" ]; then
-        echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
-        return 0
-    fi
+	if [ ! -x "$TELEGRAM_NOTIFY" ]; then
+		echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
+		return 0
+	fi
 
-    if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
-        echo "⚠️ No se pudo enviar la notificación de Telegram"
-    fi
+	if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
+		echo "⚠️ No se pudo enviar la notificación de Telegram"
+	fi
 }
 
-manejar_error()
-{
-    local status="$?"
+manejar_error() {
+	local status="$?"
 
-    trap - ERR
+	trap - ERR
 
-    echo
-    echo "🔴 La actualización diaria ha fallado en: $CURRENT_STEP"
+	echo
+	echo "🔴 La actualización diaria ha fallado en: $CURRENT_STEP"
 
-    enviar_telegram "🔴 FumetaOS ERROR
+	enviar_telegram "🔴 FumetaOS ERROR
 
 Actualización diaria de Ubuntu fallida
 
@@ -45,25 +42,25 @@ Código: $status
 
 ⏱️ $(date '+%d/%m/%Y %H:%M')"
 
-    exit "$status"
+	exit "$status"
 }
 
 [ "$(id -u)" -eq 0 ] ||
-    mostrar_error "Esta actualización debe ejecutarse como root"
+	mostrar_error "Esta actualización debe ejecutarse como root"
 
 command -v apt >/dev/null 2>&1 ||
-    mostrar_error "APT no está disponible"
+	mostrar_error "APT no está disponible"
 
 exec 9>"$LOCK_FILE"
 
 flock -n 9 ||
-    mostrar_error "Ya hay una actualización del sistema en curso"
+	mostrar_error "Ya hay una actualización del sistema en curso"
 
 export DEBIAN_FRONTEND=noninteractive
 
 APT_OPTIONS=(
-    -o "DPkg::Lock::Timeout=$APT_LOCK_TIMEOUT"
-    -o Dpkg::Options::=--force-confold
+	-o "DPkg::Lock::Timeout=$APT_LOCK_TIMEOUT"
+	-o Dpkg::Options::=--force-confold
 )
 
 trap manejar_error ERR
@@ -79,21 +76,21 @@ echo
 CURRENT_STEP="Instalación de actualizaciones normales"
 echo "📦 $CURRENT_STEP"
 apt "${APT_OPTIONS[@]}" \
-    --yes \
-    upgrade
+	--yes \
+	upgrade
 
 echo
 CURRENT_STEP="Resolución de actualizaciones completas"
 echo "📦 $CURRENT_STEP"
 apt "${APT_OPTIONS[@]}" \
-    --yes \
-    dist-upgrade
+	--yes \
+	dist-upgrade
 
 if [ -f /var/run/reboot-required ]; then
-    echo
-    echo "🟡 Hay un reinicio pendiente, pero no se reiniciará automáticamente"
+	echo
+	echo "🟡 Hay un reinicio pendiente, pero no se reiniciará automáticamente"
 
-    enviar_telegram "🟡 FumetaOS REINICIO NECESARIO
+	enviar_telegram "🟡 FumetaOS REINICIO NECESARIO
 
 La actualización diaria de Ubuntu ha terminado correctamente.
 

@@ -5,10 +5,10 @@ set -euo pipefail
 SOURCE_BASE="/DATA/TimeCapsule/Multimedia"
 
 FOLDERS=(
-    AVANTIS
-    Nenas
-    Peliculas
-    Series
+	AVANTIS
+	Nenas
+	Peliculas
+	Series
 )
 
 MAC_USER="fumetasing"
@@ -34,17 +34,15 @@ CURRENT_STEP="Preparación"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../core/mac-mirror-common.sh"
 
-mostrar_error()
-{
-    echo "❌ $1"
-    exit 20
+mostrar_error() {
+	echo "❌ $1"
+	exit 20
 }
 
-notificar_error()
-{
-    local status="$1"
+notificar_error() {
+	local status="$1"
 
-    mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
+	mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
 
 La copia de Time Capsule al Mac ha fallado.
 
@@ -54,176 +52,166 @@ Código: $status
 ⏱️ $(date '+%d/%m/%Y %H:%M')"
 }
 
-manejar_error()
-{
-    local status="$?"
+manejar_error() {
+	local status="$?"
 
-    trap - ERR
+	trap - ERR
 
-    echo
-    echo "🔴 La copia de Time Capsule al Mac ha fallado en: $CURRENT_STEP"
+	echo
+	echo "🔴 La copia de Time Capsule al Mac ha fallado en: $CURRENT_STEP"
 
-    notificar_error "$status"
+	notificar_error "$status"
 
-    exit "$status"
+	exit "$status"
 }
 
-preparar_destinos_mac()
-{
-    local folder
-    local remote_script
+preparar_destinos_mac() {
+	local folder
+	local remote_script
 
-    remote_script="$(
-        {
-            printf 'DESTINATION=%q\n' "$MAC_DESTINATION"
+	remote_script="$(
+		{
+			printf 'DESTINATION=%q\n' "$MAC_DESTINATION"
 
-            for folder in "${FOLDERS[@]}"
-            do
-                printf 'mkdir -p %q\n' "$MAC_DESTINATION/$folder"
-            done
+			for folder in "${FOLDERS[@]}"; do
+				printf 'mkdir -p %q\n' "$MAC_DESTINATION/$folder"
+			done
 
-            cat <<'REMOTE'
+			cat <<'REMOTE'
 mkdir -p "$DESTINATION"
 REMOTE
-        }
-    )"
+		}
+	)"
 
-    "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        /bin/sh -s <<<"$remote_script" ||
-        mostrar_error "No se pudieron preparar los destinos en el Mac"
+	"${SSH_COMMAND[@]}" \
+		"$MAC_USER@$MAC_HOST" \
+		/bin/sh -s <<<"$remote_script" ||
+		mostrar_error "No se pudieron preparar los destinos en el Mac"
 }
 
-validar_destinos_mac()
-{
-    local folder
+validar_destinos_mac() {
+	local folder
 
-    for folder in "${FOLDERS[@]}"
-    do
-        "${SSH_COMMAND[@]}" \
-            "$MAC_USER@$MAC_HOST" \
-            "test -d '$MAC_DESTINATION/$folder'" ||
-            mostrar_error "No existe el destino en el Mac: $MAC_DESTINATION/$folder"
-    done
+	for folder in "${FOLDERS[@]}"; do
+		"${SSH_COMMAND[@]}" \
+			"$MAC_USER@$MAC_HOST" \
+			"test -d '$MAC_DESTINATION/$folder'" ||
+			mostrar_error "No existe el destino en el Mac: $MAC_DESTINATION/$folder"
+	done
 }
 
-comprobar_borrados_previstos()
-{
-    local source_dir="$1"
-    local rsync_destination="$2"
-    local folder="$3"
-    local deletes
+comprobar_borrados_previstos() {
+	local source_dir="$1"
+	local rsync_destination="$2"
+	local folder="$3"
+	local deletes
 
-    deletes="$(
-        rsync \
-            -a \
-            --no-owner \
-            --no-group \
-            --dry-run \
-            --delete-delay \
-            --itemize-changes \
-            --out-format='%i' \
-            -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
-            "$source_dir" \
-            "$rsync_destination" |
-            awk '$0 == "*deleting" { count++ } END { print count + 0 }'
-    )"
+	deletes="$(
+		rsync \
+			-a \
+			--no-owner \
+			--no-group \
+			--dry-run \
+			--delete-delay \
+			--itemize-changes \
+			--out-format='%i' \
+			-e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+			"$source_dir" \
+			"$rsync_destination" |
+			awk '$0 == "*deleting" { count++ } END { print count + 0 }'
+	)"
 
-    if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
-        echo "❌ Se cancelarían $deletes borrados en $folder; límite: $DELETE_LIMIT"
-        echo "ℹ️ Revisa el origen y el destino antes de usar --allow-large-delete"
-        exit 20
-    fi
+	if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
+		echo "❌ Se cancelarían $deletes borrados en $folder; límite: $DELETE_LIMIT"
+		echo "ℹ️ Revisa el origen y el destino antes de usar --allow-large-delete"
+		exit 20
+	fi
 }
 
-ejecutar_rsync_con_reintentos()
-{
-    local source_dir="$1"
-    local rsync_destination="$2"
-    local folder="$3"
-    local attempt=1
-    local status=20
+ejecutar_rsync_con_reintentos() {
+	local source_dir="$1"
+	local rsync_destination="$2"
+	local folder="$3"
+	local attempt=1
+	local status=20
 
-    while [ "$attempt" -le "$MAX_RETRIES" ]
-    do
-        CURRENT_STEP="Validación del USB antes del intento $attempt de $folder"
+	while [ "$attempt" -le "$MAX_RETRIES" ]; do
+		CURRENT_STEP="Validación del USB antes del intento $attempt de $folder"
 
-        mac_mirror_usb_disponible ||
-            mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+		mac_mirror_usb_disponible ||
+			mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
 
-        validar_destinos_mac
+		validar_destinos_mac
 
-        CURRENT_STEP="Copia de $folder"
+		CURRENT_STEP="Copia de $folder"
 
-        echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
+		echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
 
-        if rsync \
-            -a \
-            --no-owner \
-            --no-group \
-            --delete-delay \
-            --partial \
-            --human-readable \
-            --stats \
-            "${DRY_RUN[@]}" \
-            -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
-            "$source_dir" \
-            "$rsync_destination"
-        then
-            return 0
-        fi
+		if rsync \
+			-a \
+			--no-owner \
+			--no-group \
+			--delete-delay \
+			--partial \
+			--human-readable \
+			--stats \
+			"${DRY_RUN[@]}" \
+			-e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+			"$source_dir" \
+			"$rsync_destination"; then
+			return 0
+		fi
 
-        status="$?"
+		status="$?"
 
-        if [ "$attempt" -lt "$MAX_RETRIES" ]; then
-            echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de $folder. Reintentando en $RETRY_DELAY segundos..."
-            sleep "$RETRY_DELAY"
-        fi
+		if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+			echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de $folder. Reintentando en $RETRY_DELAY segundos..."
+			sleep "$RETRY_DELAY"
+		fi
 
-        attempt=$((attempt + 1))
-    done
+		attempt=$((attempt + 1))
+	done
 
-    return "$status"
+	return "$status"
 }
 
 case "${1:-}" in
-    "")
-        ;;
-    --dry-run)
-        DRY_RUN=(--dry-run)
-        ;;
-    --allow-large-delete)
-        ALLOW_LARGE_DELETE=1
-        ;;
-    *)
-        echo "Uso:"
-        echo "fumetaos-timecapsule-mac-backup"
-        echo "fumetaos-timecapsule-mac-backup --dry-run"
-        echo "fumetaos-timecapsule-mac-backup --allow-large-delete"
-        exit 20
-        ;;
+"") ;;
+--dry-run)
+	DRY_RUN=(--dry-run)
+	;;
+--allow-large-delete)
+	ALLOW_LARGE_DELETE=1
+	;;
+*)
+	echo "Uso:"
+	echo "fumetaos-timecapsule-mac-backup"
+	echo "fumetaos-timecapsule-mac-backup --dry-run"
+	echo "fumetaos-timecapsule-mac-backup --allow-large-delete"
+	exit 20
+	;;
 esac
 
 [ "$(id -u)" -eq 0 ] ||
-    mostrar_error "Esta copia debe ejecutarse como root"
+	mostrar_error "Esta copia debe ejecutarse como root"
 
 [ -d "$SOURCE_BASE" ] ||
-    mostrar_error "No existe el origen: $SOURCE_BASE"
+	mostrar_error "No existe el origen: $SOURCE_BASE"
 
 findmnt -T "$SOURCE_BASE" -no FSTYPE |
-    grep -q '^fuse\.' ||
-    mostrar_error "Time Capsule no está montada correctamente"
+	grep -q '^fuse\.' ||
+	mostrar_error "Time Capsule no está montada correctamente"
 
 [ -r "$SSH_KEY" ] ||
-    mostrar_error "No existe la clave SSH: $SSH_KEY"
+	mostrar_error "No existe la clave SSH: $SSH_KEY"
 
 [ -r "$SSH_KNOWN_HOSTS" ] ||
-    mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
+	mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
 
 exec 9>"$LOCK_FILE"
 
 flock -n 9 ||
-    mostrar_error "Ya hay una copia al Mac en curso"
+	mostrar_error "Ya hay una copia al Mac en curso"
 
 mac_mirror_crear_ssh_command
 
@@ -240,41 +228,39 @@ echo
 CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
 
 mac_mirror_usb_disponible ||
-    mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+	mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
 
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
-    validar_destinos_mac
+	validar_destinos_mac
 else
-    CURRENT_STEP="Preparación de destinos en el Mac"
-    preparar_destinos_mac
+	CURRENT_STEP="Preparación de destinos en el Mac"
+	preparar_destinos_mac
 fi
 
-for folder in "${FOLDERS[@]}"
-do
-    source_dir="$SOURCE_BASE/$folder/"
-    destination_dir="$MAC_DESTINATION/$folder"
-    rsync_destination="$MAC_USER@$MAC_HOST:$destination_dir/"
+for folder in "${FOLDERS[@]}"; do
+	source_dir="$SOURCE_BASE/$folder/"
+	destination_dir="$MAC_DESTINATION/$folder"
+	rsync_destination="$MAC_USER@$MAC_HOST:$destination_dir/"
 
-    [ -d "$source_dir" ] ||
-        mostrar_error "No existe la carpeta de origen: $source_dir"
+	[ -d "$source_dir" ] ||
+		mostrar_error "No existe la carpeta de origen: $source_dir"
 
-    echo
-    echo "📁 Copiando: $folder"
+	echo
+	echo "📁 Copiando: $folder"
 
-    if [ "${#DRY_RUN[@]}" -eq 0 ] &&
-       [ "$ALLOW_LARGE_DELETE" -eq 0 ]
-    then
-        CURRENT_STEP="Comprobación de borrados de $folder"
-        comprobar_borrados_previstos \
-            "$source_dir" \
-            "$rsync_destination" \
-            "$folder"
-    fi
+	if [ "${#DRY_RUN[@]}" -eq 0 ] &&
+		[ "$ALLOW_LARGE_DELETE" -eq 0 ]; then
+		CURRENT_STEP="Comprobación de borrados de $folder"
+		comprobar_borrados_previstos \
+			"$source_dir" \
+			"$rsync_destination" \
+			"$folder"
+	fi
 
-    ejecutar_rsync_con_reintentos \
-        "$source_dir" \
-        "$rsync_destination" \
-        "$folder"
+	ejecutar_rsync_con_reintentos \
+		"$source_dir" \
+		"$rsync_destination" \
+		"$folder"
 done
 
 trap - ERR
@@ -282,7 +268,7 @@ trap - ERR
 echo
 
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
-    echo "✅ Simulación completada: no se ha copiado ni borrado nada"
+	echo "✅ Simulación completada: no se ha copiado ni borrado nada"
 else
-    echo "✅ Copia espejo de Time Capsule completada"
+	echo "✅ Copia espejo de Time Capsule completada"
 fi

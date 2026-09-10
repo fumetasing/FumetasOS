@@ -9,7 +9,6 @@ source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/system.sh"
 source "$CORE_DIR/services.sh"
 
-
 ###########################################################
 # Versión
 ###########################################################
@@ -17,9 +16,8 @@ source "$CORE_DIR/services.sh"
 VERSION="desconocida"
 
 if [ -f "$VERSION_FILE" ]; then
-    VERSION=$(cat "$VERSION_FILE")
+	VERSION=$(cat "$VERSION_FILE")
 fi
-
 
 ###########################################################
 # Recursos
@@ -35,35 +33,28 @@ DATA_DISK=$(disk_usage)
 
 UPDATES=$(updates_available)
 
-
-
 ###########################################################
 # Estado general
 ###########################################################
 
 STATUS="🟢 PERFECTO"
 
+if [ "$CPU" -ge "$CPU_WARNING" ] ||
+	[ "$RAM" -ge "$RAM_WARNING" ] ||
+	[ "$DATA_DISK" -ge "$DISK_WARNING" ] ||
+	[ "$UPDATES" -gt 0 ]; then
 
-if [ "$CPU" -ge "$CPU_WARNING" ] || \
-   [ "$RAM" -ge "$RAM_WARNING" ] || \
-   [ "$DATA_DISK" -ge "$DISK_WARNING" ] || \
-   [ "$UPDATES" -gt 0 ]
-then
-
-    STATUS="🟡 AVISOS"
+	STATUS="🟡 AVISOS"
 
 fi
 
+if [ "$CPU" -ge "$CPU_CRITICAL" ] ||
+	[ "$RAM" -ge "$RAM_CRITICAL" ] ||
+	[ "$DATA_DISK" -ge "$DISK_CRITICAL" ]; then
 
-if [ "$CPU" -ge "$CPU_CRITICAL" ] || \
-   [ "$RAM" -ge "$RAM_CRITICAL" ] || \
-   [ "$DATA_DISK" -ge "$DISK_CRITICAL" ]
-then
-
-    STATUS="🔴 REVISAR"
+	STATUS="🔴 REVISAR"
 
 fi
-
 
 ###########################################################
 # Contadores servicios
@@ -72,19 +63,15 @@ fi
 SERVICES_OK=0
 SERVICES_TOTAL=0
 
+for SERVICE in $SYSTEM_SERVICES; do
 
-for SERVICE in $SYSTEM_SERVICES
-do
+	SERVICES_TOTAL=$((SERVICES_TOTAL + 1))
 
-    SERVICES_TOTAL=$((SERVICES_TOTAL+1))
-
-    if [ "$(service_state "$SERVICE")" = "active" ]
-    then
-        SERVICES_OK=$((SERVICES_OK+1))
-    fi
+	if [ "$(service_state "$SERVICE")" = "active" ]; then
+		SERVICES_OK=$((SERVICES_OK + 1))
+	fi
 
 done
-
 
 ###########################################################
 # Contadores timers
@@ -93,19 +80,15 @@ done
 TIMERS_OK=0
 TIMERS_TOTAL=0
 
+for TIMER in $FUMETAOS_TIMERS; do
 
-for TIMER in $FUMETAOS_TIMERS
-do
+	TIMERS_TOTAL=$((TIMERS_TOTAL + 1))
 
-    TIMERS_TOTAL=$((TIMERS_TOTAL+1))
-
-    if [ "$(timer_state "$TIMER")" = "active" ]
-    then
-        TIMERS_OK=$((TIMERS_OK+1))
-    fi
+	if [ "$(timer_state "$TIMER")" = "active" ]; then
+		TIMERS_OK=$((TIMERS_OK + 1))
+	fi
 
 done
-
 
 ###########################################################
 # Salida

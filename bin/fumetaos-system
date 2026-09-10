@@ -7,216 +7,200 @@
 
 source "$(dirname "$0")/../core/common.sh"
 
+mostrar_version() {
 
-mostrar_version()
-{
+	echo
+	echo "🖥️ FumetaOS"
+	echo
 
-echo
-echo "🖥️ FumetaOS"
-echo
+	if [ -f "$VERSION_FILE" ]; then
+		echo "Versión: $(cat "$VERSION_FILE")"
+	else
+		echo "Versión: desconocida"
+	fi
 
-if [ -f "$VERSION_FILE" ]; then
-    echo "Versión: $(cat "$VERSION_FILE")"
-else
-    echo "Versión: desconocida"
-fi
+	echo "Kernel: $(uname -r)"
 
-echo "Kernel: $(uname -r)"
+	echo "Uptime: $(uptime -p | sed 's/up //')"
 
-echo "Uptime: $(uptime -p | sed 's/up //')"
-
-echo
+	echo
 
 }
 
+mostrar_status() {
 
-mostrar_status()
-{
+	echo
+	echo "🖥️ Estado del sistema"
+	echo
 
-echo
-echo "🖥️ Estado del sistema"
-echo
+	if [ -f "$VERSION_FILE" ]; then
+		echo "Versión: $(cat "$VERSION_FILE")"
+	else
+		echo "Versión: desconocida"
+	fi
 
-if [ -f "$VERSION_FILE" ]; then
-    echo "Versión: $(cat "$VERSION_FILE")"
-else
-    echo "Versión: desconocida"
-fi
+	echo "Kernel: $(uname -r)"
+	echo "Uptime: $(uptime -p | sed 's/up //')"
 
-echo "Kernel: $(uname -r)"
-echo "Uptime: $(uptime -p | sed 's/up //')"
+	echo
 
-echo
+	echo "🌐 Red"
 
-echo "🌐 Red"
+	IP=$(hostname -I | awk '{print $1}')
 
-IP=$(hostname -I | awk '{print $1}')
+	if [ -n "$IP" ]; then
+		echo "IP: $IP"
+	else
+		echo "IP: no disponible"
+	fi
 
-if [ -n "$IP" ]; then
-    echo "IP: $IP"
-else
-    echo "IP: no disponible"
-fi
+	echo
 
-echo
+	echo "💾 Disco raíz"
 
-echo "💾 Disco raíz"
+	DISK=$(df -h / | awk 'NR==2 {print $5}')
 
-DISK=$(df -h / | awk 'NR==2 {print $5}')
+	if [ -n "$DISK" ]; then
+		echo "Uso: $DISK"
+	else
+		echo "Uso: no disponible"
+	fi
 
-if [ -n "$DISK" ]; then
-    echo "Uso: $DISK"
-else
-    echo "Uso: no disponible"
-fi
+	echo
 
-echo
+	echo "🐳 Docker"
 
-echo "🐳 Docker"
+	if command_exists docker; then
 
-if command_exists docker; then
+		if systemctl is-active --quiet docker; then
+			echo "Estado: activo"
+		else
+			echo "Estado: detenido"
+		fi
 
-    if systemctl is-active --quiet docker; then
-        echo "Estado: activo"
-    else
-        echo "Estado: detenido"
-    fi
+	else
 
-else
+		echo "Estado: no instalado"
 
-    echo "Estado: no instalado"
+	fi
 
-fi
-
-echo
+	echo
 
 }
 
+mostrar_update() {
 
-mostrar_update()
-{
+	echo
+	echo "🔄 FumetaOS Update"
+	echo
 
-echo
-echo "🔄 FumetaOS Update"
-echo
+	if [ -f "$VERSION_FILE" ]; then
 
-if [ -f "$VERSION_FILE" ]; then
+		echo "Versión instalada: $(cat "$VERSION_FILE")"
 
-    echo "Versión instalada: $(cat "$VERSION_FILE")"
+	else
 
-else
+		echo "Versión instalada: desconocida"
 
-    echo "Versión instalada: desconocida"
+	fi
 
-fi
+	echo
+	echo "Sistema de actualización disponible:"
+	echo
+	echo "   fumetaos update"
+	echo
 
-echo
-echo "Sistema de actualización disponible:"
-echo
-echo "   fumetaos update"
-echo
+	echo "Este comando realiza:"
+	echo "   💾 Backup previo"
+	echo "   📦 Instalación del paquete"
+	echo "   ⚙️ Actualización de servicios"
+	echo "   🩺 Comprobación del sistema"
 
-echo "Este comando realiza:"
-echo "   💾 Backup previo"
-echo "   📦 Instalación del paquete"
-echo "   ⚙️ Actualización de servicios"
-echo "   🩺 Comprobación del sistema"
-
-echo
+	echo
 
 }
 
+mostrar_changelog() {
 
-mostrar_changelog()
-{
+	echo
+	echo "📜 FumetaOS Changelog"
+	echo
 
-echo
-echo "📜 FumetaOS Changelog"
-echo
+	if [ -f "$FUMETAOS_HOME/CHANGELOG.md" ]; then
 
-if [ -f "$FUMETAOS_HOME/CHANGELOG.md" ]; then
+		cat "$FUMETAOS_HOME/CHANGELOG.md"
 
-    cat "$FUMETAOS_HOME/CHANGELOG.md"
+	else
 
-else
+		echo "❌ No existe CHANGELOG.md"
 
-    echo "❌ No existe CHANGELOG.md"
+	fi
 
-fi
-
-echo
+	echo
 
 }
 
+mostrar_help() {
 
-mostrar_help()
-{
+	echo
+	echo "🖥️ FumetaOS System"
+	echo
 
-echo
-echo "🖥️ FumetaOS System"
-echo
+	echo "Uso:"
+	echo
 
-echo "Uso:"
-echo
+	echo "fumetaos system version"
+	echo "   Mostrar versión del sistema"
+	echo
 
-echo "fumetaos system version"
-echo "   Mostrar versión del sistema"
-echo
+	echo "fumetaos system status"
+	echo "   Estado del sistema"
+	echo
 
-echo "fumetaos system status"
-echo "   Estado del sistema"
-echo
+	echo "fumetaos system update"
+	echo "   Información de actualización"
+	echo
 
-echo "fumetaos system update"
-echo "   Información de actualización"
-echo
+	echo "fumetaos system changelog"
+	echo "   Mostrar historial de cambios"
+	echo
 
-echo "fumetaos system changelog"
-echo "   Mostrar historial de cambios"
-echo
-
-echo "fumetaos system help"
-echo "   Mostrar ayuda"
-echo
+	echo "fumetaos system help"
+	echo "   Mostrar ayuda"
+	echo
 
 }
-
 
 case "$1" in
 
 version)
 
-    mostrar_version
-    ;;
-
+	mostrar_version
+	;;
 
 status)
 
-    mostrar_status
-    ;;
-
+	mostrar_status
+	;;
 
 update)
 
-    mostrar_update
-    ;;
-
+	mostrar_update
+	;;
 
 changelog)
 
-    mostrar_changelog
-    ;;
+	mostrar_changelog
+	;;
 
+help | "")
 
-help|"")
-
-    mostrar_help
-    ;;
-
+	mostrar_help
+	;;
 
 *)
 
-    mostrar_help
-    ;;
+	mostrar_help
+	;;
 
 esac

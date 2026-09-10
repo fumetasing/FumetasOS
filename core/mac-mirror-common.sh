@@ -5,45 +5,42 @@
 # Utilidades compartidas para copias espejo al Mac
 ###########################################################
 
-mac_mirror_enviar_telegram()
-{
-    local message="$1"
+mac_mirror_enviar_telegram() {
+	local message="$1"
 
-    if [ ! -x "$TELEGRAM_NOTIFY" ]; then
-        echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
-        return 0
-    fi
+	if [ ! -x "$TELEGRAM_NOTIFY" ]; then
+		echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
+		return 0
+	fi
 
-    if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
-        echo "⚠️ No se pudo enviar la notificación de Telegram"
-    fi
+	if ! printf '%s\n' "$message" | "$TELEGRAM_NOTIFY"; then
+		echo "⚠️ No se pudo enviar la notificación de Telegram"
+	fi
 }
 
-mac_mirror_crear_ssh_command()
-{
-    SSH_COMMAND=(
-        ssh
-        -i "$SSH_KEY"
-        -o BatchMode=yes
-        -o ConnectTimeout=20
-        -o ServerAliveInterval=30
-        -o ServerAliveCountMax=6
-        -o "UserKnownHostsFile=$SSH_KNOWN_HOSTS"
-        -o StrictHostKeyChecking=yes
-    )
+mac_mirror_crear_ssh_command() {
+	SSH_COMMAND=(
+		ssh
+		-i "$SSH_KEY"
+		-o BatchMode=yes
+		-o ConnectTimeout=20
+		-o ServerAliveInterval=30
+		-o ServerAliveCountMax=6
+		-o "UserKnownHostsFile=$SSH_KNOWN_HOSTS"
+		-o StrictHostKeyChecking=yes
+	)
 }
 
-mac_mirror_usb_disponible()
-{
-    local remote_script
+mac_mirror_usb_disponible() {
+	local remote_script
 
-    remote_script="$(
-        {
-            printf 'ROOT=%q\n' "$MAC_ROOT"
-            printf 'EXPECTED_MOUNT=%q\n' "$MAC_USB_MOUNT"
-            printf 'MINIMUM_FREE_KB=%q\n' "$MINIMUM_FREE_KB"
+	remote_script="$(
+		{
+			printf 'ROOT=%q\n' "$MAC_ROOT"
+			printf 'EXPECTED_MOUNT=%q\n' "$MAC_USB_MOUNT"
+			printf 'MINIMUM_FREE_KB=%q\n' "$MINIMUM_FREE_KB"
 
-            cat <<'REMOTE'
+			cat <<'REMOTE'
 punto_montaje()
 {
     df -P "$1" |
@@ -83,10 +80,10 @@ fi
 
 echo "💾 USB validado: $EXPECTED_MOUNT"
 REMOTE
-        }
-    )"
+		}
+	)"
 
-    "${SSH_COMMAND[@]}" \
-        "$MAC_USER@$MAC_HOST" \
-        /bin/sh -s <<<"$remote_script"
+	"${SSH_COMMAND[@]}" \
+		"$MAC_USER@$MAC_HOST" \
+		/bin/sh -s <<<"$remote_script"
 }

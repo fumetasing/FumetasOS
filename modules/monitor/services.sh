@@ -10,42 +10,34 @@
 
 source "$(dirname "$0")/../../core/common.sh"
 
-
 WATCH=0
 
 if [ "$1" = "--watch" ]; then
-WATCH=1
+	WATCH=1
 fi
-
 
 ERROR=0
 
+for SERVICE in $SYSTEM_SERVICES; do
 
-for SERVICE in $SYSTEM_SERVICES
-do
+	if systemctl is-active --quiet "$SERVICE"; then
 
+		if [ "$WATCH" -eq 0 ]; then
+			echo "✅ $SERVICE"
+		fi
 
-if systemctl is-active --quiet "$SERVICE"; then
+	else
 
-    if [ "$WATCH" -eq 0 ]; then
-        echo "✅ $SERVICE"
-    fi
+		if [ "$WATCH" -eq 0 ]; then
+			echo "🚨 $SERVICE"
+		else
+			echo "Servicio detenido: $SERVICE"
+		fi
 
+		ERROR=20
 
-else
-
-    if [ "$WATCH" -eq 0 ]; then
-        echo "🚨 $SERVICE"
-    else
-        echo "Servicio detenido: $SERVICE"
-    fi
-
-    ERROR=20
-
-fi
-
+	fi
 
 done
-
 
 exit $ERROR

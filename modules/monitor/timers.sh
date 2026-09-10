@@ -10,30 +10,24 @@
 
 source "$(dirname "$0")/../../core/common.sh"
 
-
 ERROR=0
-
 
 echo
 
+for TIMER in $FUMETAOS_TIMERS; do
 
-for TIMER in $FUMETAOS_TIMERS
-do
+	if systemctl is-active --quiet "$TIMER"; then
 
-    if systemctl is-active --quiet "$TIMER"
-    then
+		echo "✅ $TIMER"
 
-        echo "✅ $TIMER"
+	else
 
-    else
+		echo "🚨 $TIMER"
 
-        echo "🚨 $TIMER"
+		ERROR=20
 
-        ERROR=20
-
-    fi
+	fi
 
 done
-
 
 exit "$ERROR"
