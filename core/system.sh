@@ -109,7 +109,25 @@ disk_free() {
 ###########################################################
 
 updates_available() {
-	apt list --upgradable 2>/dev/null |
-		tail -n +2 |
-		wc -l
+	local simulation
+
+	if ! simulation="$(
+		apt-get \
+			--simulate \
+			--quiet=2 \
+			dist-upgrade \
+			2>/dev/null
+	)"; then
+		return 1
+	fi
+
+	awk '
+        $1 == "Inst" {
+            updates++
+        }
+
+        END {
+            print updates + 0
+        }
+    ' <<<"$simulation"
 }
