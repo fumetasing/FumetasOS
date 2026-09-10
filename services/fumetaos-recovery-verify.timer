@@ -2,7 +2,7 @@
 Description=Verificar semanalmente la copia cifrada de FumetaOS
 
 [Timer]
-OnCalendar=Mon *-*-* 11:00:00
+OnCalendar=Mon *-*-* 06:00:00
 Persistent=true
 
 [Install]
