@@ -23,6 +23,12 @@ DRY_RUN=()
 ALLOW_LARGE_DELETE=0
 CURRENT_STEP="Preparación"
 
+RSYNC_FILTER_OPTIONS=(
+	--exclude='/lost+found/'
+	--exclude='/TimeCapsule/'
+	--filter='P /TimeCapsule/***'
+)
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../core/mac-mirror-common.sh"
 
@@ -61,21 +67,10 @@ comprobar_borrados_previstos() {
 	local deletes
 
 	deletes="$(
-		rsync \
-			-a \
-			--no-owner \
-			--no-group \
-			--dry-run \
-			--delete-delay \
-			--itemize-changes \
-			--out-format='%i' \
-			--exclude='/lost+found/' \
-			--exclude='/TimeCapsule/' \
-			--filter='P /TimeCapsule/***' \
-			-e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+		mac_mirror_contar_borrados \
 			"$SOURCE_DIR" \
-			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" |
-			awk '$0 == "*deleting" { count++ } END { print count + 0 }'
+			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
+			"${RSYNC_FILTER_OPTIONS[@]}"
 	)"
 
 	if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
@@ -99,21 +94,10 @@ ejecutar_rsync_con_reintentos() {
 
 		echo "🔄 Intento $attempt/$MAX_RETRIES: datos"
 
-		if rsync \
-			-a \
-			--no-owner \
-			--no-group \
-			--delete-delay \
-			--partial \
-			--human-readable \
-			--stats \
-			--exclude='/lost+found/' \
-			--exclude='/TimeCapsule/' \
-			--filter='P /TimeCapsule/***' \
-			"${DRY_RUN[@]}" \
-			-e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+		if mac_mirror_copiar \
 			"$SOURCE_DIR" \
-			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"; then
+			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
+			"${RSYNC_FILTER_OPTIONS[@]}"; then
 			return 0
 		fi
 

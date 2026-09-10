@@ -107,18 +107,9 @@ comprobar_borrados_previstos() {
 	local deletes
 
 	deletes="$(
-		rsync \
-			-a \
-			--no-owner \
-			--no-group \
-			--dry-run \
-			--delete-delay \
-			--itemize-changes \
-			--out-format='%i' \
-			-e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+		mac_mirror_contar_borrados \
 			"$source_dir" \
-			"$rsync_destination" |
-			awk '$0 == "*deleting" { count++ } END { print count + 0 }'
+			"$rsync_destination"
 	)"
 
 	if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
@@ -147,16 +138,7 @@ ejecutar_rsync_con_reintentos() {
 
 		echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
 
-		if rsync \
-			-a \
-			--no-owner \
-			--no-group \
-			--delete-delay \
-			--partial \
-			--human-readable \
-			--stats \
-			"${DRY_RUN[@]}" \
-			-e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+		if mac_mirror_copiar \
 			"$source_dir" \
 			"$rsync_destination"; then
 			return 0
