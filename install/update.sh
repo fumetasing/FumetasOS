@@ -37,8 +37,8 @@ limpiar_backups_update()
             -maxdepth 1 \
             -type f \
             -name 'fumetaos-update-*.tar.gz' \
-            -printf '%f\n' \
-            | sort -r
+            -printf '%f\n' |
+            sort -r
     )
 
     for OLD_FILE in "${BACKUPS[@]:$UPDATE_KEEP}"
@@ -62,15 +62,14 @@ crear_backup()
 
     mkdir -p "$BACKUP_DIR" "$SYSTEM_BACKUP_DIR"
 
-    tar -czf "$FILE" \
+    if ! tar -czf "$FILE" \
         -C "$BASE" \
         bin \
         core \
         modules \
         config \
         VERSION
-
-    if [ $? -ne 0 ]; then
+    then
         echo "❌ Error creando backup"
         exit 20
     fi

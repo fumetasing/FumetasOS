@@ -82,7 +82,7 @@ crear_backup_previo()
     echo "💾 Creando backup previo..."
 
     if [ -d "$BASE/apps" ]; then
-        tar -czf "$FILE" \
+        if tar -czf "$FILE" \
             -C "$BASE" \
             bin \
             core \
@@ -90,22 +90,28 @@ crear_backup_previo()
             apps \
             config \
             VERSION
+        then
+            echo "✅ Backup creado:"
+            echo "$FILE"
+        else
+            echo "❌ Error creando backup"
+            exit 20
+        fi
     else
-        tar -czf "$FILE" \
+        if tar -czf "$FILE" \
             -C "$BASE" \
             bin \
             core \
             modules \
             config \
             VERSION
-    fi
-
-    if [ $? -eq 0 ]; then
-        echo "✅ Backup creado:"
-        echo "$FILE"
-    else
-        echo "❌ Error creando backup"
-        exit 20
+        then
+            echo "✅ Backup creado:"
+            echo "$FILE"
+        else
+            echo "❌ Error creando backup"
+            exit 20
+        fi
     fi
 
     echo
