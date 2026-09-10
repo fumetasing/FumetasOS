@@ -116,7 +116,7 @@ comprobar_borrados_previstos()
 
     deletes="$(
         rsync \
-            -aH \
+            -a \
             --no-owner \
             --no-group \
             --dry-run \
@@ -158,7 +158,7 @@ ejecutar_rsync_con_reintentos()
         echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
 
         if rsync \
-            -aH \
+            -a \
             --no-owner \
             --no-group \
             --delete-delay \
