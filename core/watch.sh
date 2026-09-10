@@ -10,118 +10,94 @@ source "$(dirname "${BASH_SOURCE[0]}")/system.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/apps.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/events.sh"
 
-
 WATCH_STATE="$FUMETAOS_HOME/data/watch-state"
 
 mkdir -p "$WATCH_STATE"
-
 
 ###########################################################
 # Estado
 ###########################################################
 
-state_get()
-{
+state_get() {
 
-FILE="$WATCH_STATE/$1"
+	FILE="$WATCH_STATE/$1"
 
-if [ -f "$FILE" ]; then
-    cat "$FILE"
-fi
-
-}
-
-
-state_set()
-{
-
-echo "$2" > "$WATCH_STATE/$1"
+	if [ -f "$FILE" ]; then
+		cat "$FILE"
+	fi
 
 }
 
+state_set() {
 
+	echo "$2" >"$WATCH_STATE/$1"
+
+}
 
 ###########################################################
 # Servicios
 ###########################################################
 
-check_services()
-{
+check_services() {
 
-for SERVICE in $SYSTEM_SERVICES
-do
+	for SERVICE in $SYSTEM_SERVICES; do
 
-    if systemctl is-active --quiet "$SERVICE"
-    then
-        CURRENT="ok"
-    else
-        CURRENT="failed"
-    fi
+		if systemctl is-active --quiet "$SERVICE"; then
+			CURRENT="ok"
+		else
+			CURRENT="failed"
+		fi
 
+		OLD=$(state_get "service-$SERVICE")
 
-    OLD=$(state_get "service-$SERVICE")
+		#######################################################
+		# Servicio caído
+		#######################################################
 
+		if [ "$CURRENT" = "failed" ]; then
 
-    #######################################################
-    # Servicio caído
-    #######################################################
+			if [ "$OLD" = "warning" ]; then
 
-    if [ "$CURRENT" = "failed" ]
-    then
+				event_error \
+					"Servicio detenido" \
+					"$SERVICE no está activo"
 
-        if [ "$OLD" = "warning" ]
-        then
+				state_set "service-$SERVICE" "failed"
 
-            event_error \
-            "Servicio detenido" \
-            "$SERVICE no está activo"
+			elif [ "$OLD" = "ok" ] || [ -z "$OLD" ]; then
 
-            state_set "service-$SERVICE" "failed"
+				state_set "service-$SERVICE" "warning"
 
+			fi
 
-        elif [ "$OLD" = "ok" ] || [ -z "$OLD" ]
-        then
+		#######################################################
+		# Servicio recuperado
+		#######################################################
 
-            state_set "service-$SERVICE" "warning"
+		elif [ "$CURRENT" = "ok" ]; then
 
-        fi
+			if [ "$OLD" = "warning" ] || [ "$OLD" = "failed" ]; then
 
+				event_recovery \
+					"Servicio recuperado" \
+					"$SERVICE vuelve a estar activo"
 
-    #######################################################
-    # Servicio recuperado
-    #######################################################
+			fi
 
-    elif [ "$CURRENT" = "ok" ]
-    then
+			state_set "service-$SERVICE" "ok"
 
-        if [ "$OLD" = "warning" ] || [ "$OLD" = "failed" ]
-        then
+		fi
 
-            event_recovery \
-            "Servicio recuperado" \
-            "$SERVICE vuelve a estar activo"
-
-        fi
-
-
-        state_set "service-$SERVICE" "ok"
-
-    fi
-
-
-done
+	done
 
 }
-
-
 
 ###########################################################
 # Ejecutar Watch
 ###########################################################
 
-watch_run()
-{
+watch_run() {
 
-check_services
+	check_services
 
 }

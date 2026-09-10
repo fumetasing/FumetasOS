@@ -8,79 +8,66 @@
 source "$(dirname "$0")/../core/common.sh"
 source "$CORE_DIR/watch.sh"
 
+mostrar_help() {
 
-mostrar_help()
-{
+	echo
 
-echo
+	echo "👁️ FumetaOS Watch"
 
-echo "👁️ FumetaOS Watch"
+	echo
 
-echo
+	echo "Uso:"
+	echo
 
-echo "Uso:"
-echo
+	echo "fumetaos watch run"
+	echo "   Ejecutar comprobación del sistema"
 
-echo "fumetaos watch run"
-echo "   Ejecutar comprobación del sistema"
+	echo
 
-echo
+	echo "fumetaos watch help"
+	echo "   Mostrar ayuda"
 
-echo "fumetaos watch help"
-echo "   Mostrar ayuda"
-
-echo
+	echo
 
 }
 
+watch_execute() {
 
+	echo
 
-watch_execute()
-{
+	echo "👁️ FumetaOS Watch"
 
-echo
+	echo
 
-echo "👁️ FumetaOS Watch"
+	echo "🔎 Comprobando sistema..."
 
-echo
+	echo
 
-echo "🔎 Comprobando sistema..."
+	watch_run
 
-echo
+	echo
 
+	echo "✅ Comprobación completada"
 
-watch_run
-
-
-echo
-
-echo "✅ Comprobación completada"
-
-echo
+	echo
 
 }
-
-
 
 case "$1" in
 
-
 run)
 
-    watch_execute
-    ;;
+	watch_execute
+	;;
 
+help | "")
 
-help|"")
-
-    mostrar_help
-    ;;
-
+	mostrar_help
+	;;
 
 *)
 
-    mostrar_help
-    ;;
-
+	mostrar_help
+	;;
 
 esac

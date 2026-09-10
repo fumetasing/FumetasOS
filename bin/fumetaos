@@ -7,216 +7,192 @@
 
 ###########################################################
 
-
 SCRIPT_PATH="$(readlink -f "$0")"
 BIN_DIR="$(dirname "$SCRIPT_PATH")"
 
-
 source "$BIN_DIR/../core/common.sh"
 
+mostrar_help() {
 
+	echo
 
-mostrar_help()
-{
+	echo "🖥️ FumetaOS"
 
-echo
+	echo
 
-echo "🖥️ FumetaOS"
+	echo "Uso:"
 
-echo
+	echo
 
-echo "Uso:"
+	echo "fumetaos"
+	echo "   Dashboard principal"
 
-echo
+	echo
 
-echo "fumetaos"
-echo "   Dashboard principal"
+	echo "fumetaos health"
+	echo "   Estado completo del sistema"
 
-echo
+	echo
 
-echo "fumetaos health"
-echo "   Estado completo del sistema"
+	echo "fumetaos status"
+	echo "   Estado resumido"
 
-echo
+	echo
 
-echo "fumetaos status"
-echo "   Estado resumido"
+	echo "fumetaos report"
+	echo "   Enviar informe Telegram"
 
-echo
+	echo
 
-echo "fumetaos report"
-echo "   Enviar informe Telegram"
+	echo "fumetaos doctor"
+	echo "   Diagnóstico del sistema"
 
-echo
+	echo
 
-echo "fumetaos doctor"
-echo "   Diagnóstico del sistema"
+	echo "fumetaos version"
+	echo "   Mostrar versión"
 
-echo
+	echo
 
-echo "fumetaos version"
-echo "   Mostrar versión"
+	echo "fumetaos app <comando>"
+	echo "   Gestión de aplicaciones"
 
-echo
+	echo
 
-echo "fumetaos app <comando>"
-echo "   Gestión de aplicaciones"
+	echo "fumetaos system <comando>"
+	echo "   Gestión del sistema"
 
-echo
+	echo
 
-echo "fumetaos system <comando>"
-echo "   Gestión del sistema"
+	echo "fumetaos watch"
+	echo "   Vigilancia del sistema"
 
-echo
+	echo
 
-echo "fumetaos watch"
-echo "   Vigilancia del sistema"
+	echo "fumetaos services"
+	echo "   Estado de servicios y timers"
 
-echo
+	echo
 
-echo "fumetaos services"
-echo "   Estado de servicios y timers"
+	echo "fumetaos build"
+	echo "   Construir paquete FumetaOS"
 
-echo
+	echo
 
-echo "fumetaos build"
-echo "   Construir paquete FumetaOS"
+	echo "fumetaos backup"
+	echo "   Gestión de copias"
 
-echo
+	echo
 
-echo "fumetaos backup"
-echo "   Gestión de copias"
+	echo "fumetaos history"
+	echo "   Historial del sistema"
 
-echo
+	echo
 
-echo "fumetaos history"
-echo "   Historial del sistema"
+	echo "fumetaos update"
+	echo "   Actualizar FumetaOS"
 
-echo
+	echo
 
-echo "fumetaos update"
-echo "   Actualizar FumetaOS"
+	echo "fumetaos config"
+	echo "   Configuración"
 
-echo
+	echo
 
-echo "fumetaos config"
-echo "   Configuración"
+	echo "fumetaos help"
+	echo "   Mostrar ayuda"
 
-echo
-
-echo "fumetaos help"
-echo "   Mostrar ayuda"
-
-echo
+	echo
 
 }
 
-
-
 case "$1" in
-
 
 health)
 
-    exec "$BIN_DIR/fumetaos-health"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-health"
+	;;
 
 status)
 
-    exec "$BIN_DIR/fumetaos-status"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-status"
+	;;
 
 report)
 
-    exec "$BIN_DIR/fumetaos-report"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-report"
+	;;
 
 doctor)
 
-    exec "$BIN_DIR/fumetaos-doctor"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-doctor"
+	;;
 
 version)
 
-    exec "$BIN_DIR/fumetaos-version"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-version"
+	;;
 
 app)
 
-    shift
-    exec "$BIN_DIR/fumetaos-app" "$@"
-    ;;
-
+	shift
+	exec "$BIN_DIR/fumetaos-app" "$@"
+	;;
 
 system)
 
-    shift
-    exec "$BIN_DIR/fumetaos-system" "$@"
-    ;;
-
+	shift
+	exec "$BIN_DIR/fumetaos-system" "$@"
+	;;
 
 watch)
 
-    shift
-    exec "$BIN_DIR/fumetaos-watch" "$@"
-    ;;
-
+	shift
+	exec "$BIN_DIR/fumetaos-watch" "$@"
+	;;
 
 services)
 
-    exec "$BIN_DIR/fumetaos-services"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-services"
+	;;
 
 build)
 
-    exec "$BIN_DIR/fumetaos-build"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-build"
+	;;
 
 backup)
 
-    exec "$BIN_DIR/fumetaos-backup"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-backup"
+	;;
 
 history)
 
-    exec "$BIN_DIR/fumetaos-history"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-history"
+	;;
 
 update)
 
-    exec "$BIN_DIR/fumetaos-update"
-    ;;
-
+	exec "$BIN_DIR/fumetaos-update"
+	;;
 
 config)
 
-    exec "$BIN_DIR/fumetaos-config"
-    ;;
+	exec "$BIN_DIR/fumetaos-config"
+	;;
 
+help | "")
 
-help|"")
-    
-    mostrar_help
-    ;;
-
+	mostrar_help
+	;;
 
 *)
 
-    echo
-    echo "❌ Comando desconocido: $1"
-    echo
-    mostrar_help
-    exit 1
-    ;;
-
+	echo
+	echo "❌ Comando desconocido: $1"
+	echo
+	mostrar_help
+	exit 1
+	;;
 
 esac

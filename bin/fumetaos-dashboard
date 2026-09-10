@@ -10,75 +10,58 @@ source /opt/fumetaos/core/system.sh
 source /opt/fumetaos/core/apps.sh
 source /opt/fumetaos/core/services.sh
 
-
-WIDTH=42
 INNER=40
 
-
-VERSION="desconocida"
-
 if [ -f "$VERSION_FILE" ]; then
-    VERSION=$(cat "$VERSION_FILE")
+	VERSION="$(<"$VERSION_FILE")"
+else
+	VERSION="desconocida"
 fi
-
 
 ###########################################################
 # Caja
 ###########################################################
 
-line()
-{
-    printf '═%.0s' $(seq 1 $INNER)
+line() {
+	local line
+
+	printf -v line '%*s' "$INNER" ''
+	printf '%s' "${line// /═}"
 }
 
-
-top()
-{
-    echo "╔$(line)╗"
+top() {
+	echo "╔$(line)╗"
 }
 
-
-bottom()
-{
-    echo "╚$(line)╝"
+bottom() {
+	echo "╚$(line)╝"
 }
 
-
-separator()
-{
-    echo "╠$(line)╣"
+separator() {
+	echo "╠$(line)╣"
 }
 
+box() {
+	local text="$1"
 
-box()
-{
-    TEXT="$1"
-
-    printf "║ %-38s ║\n" "$TEXT"
+	printf "║ %-38s ║\n" "$text"
 }
-
 
 ###########################################################
 # Datos
 ###########################################################
 
-CPU=$(cpu_temp)
-RAM=$(ram_usage)
+CPU="$(cpu_temp)"
+RAM="$(ram_usage)"
+SYSTEM_DISK="$(df / | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
+DATA_DISK="$(disk_usage)"
+UPDATES="$(updates_available)"
 
-SYSTEM_DISK=$(df / | awk 'NR==2 {gsub("%","",$5);print $5}')
-
-DATA_DISK=$(disk_usage)
-
-UPDATES=$(updates_available)
-
-
-if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1
-then
-    STATUS="PERFECTO"
+if /opt/fumetaos/bin/fumetaos-health --check >/dev/null 2>&1; then
+	STATUS="PERFECTO"
 else
-    STATUS="AVISOS"
+	STATUS="AVISOS"
 fi
-
 
 ###########################################################
 # Render
@@ -86,115 +69,71 @@ fi
 
 top
 
-
 box "FumetaOS v$VERSION"
 
-
 separator
-
 
 box "ESTADO: $STATUS"
 
-
 separator
-
 
 box "RECURSOS"
 
 box "CPU:              ${CPU} C"
-
 box "RAM:              ${RAM} %"
-
 box "SISTEMA:          ${SYSTEM_DISK} %"
 
-
-
 separator
-
 
 box "APLICACIONES"
 
+while IFS= read -r app; do
+	app_load "$app"
 
-for APP in $(app_list)
-do
+	if app_running; then
+		icon="[OK]"
+	else
+		icon="[--]"
+	fi
 
-    app_load "$APP"
-
-
-    if app_running
-    then
-        ICON="[OK]"
-    else
-        ICON="[--]"
-    fi
-
-
-    box "$ICON $APP_NAME"
-
-    box "     Version: $APP_VERSION"
-
-    box "     Health: $(app_health)"
-
-done
-
-
+	box "$icon $APP_NAME"
+	box "     Version: $APP_VERSION"
+	box "     Health: $(app_health)"
+done < <(app_list)
 
 separator
-
 
 box "SERVICIOS"
 
-
 box "TIMERS FUMETAOS"
 
-
-for TIMER in $FUMETAOS_TIMERS
-do
-
-    if timer_state "$TIMER" | grep -q active
-    then
-        box "[OK] ${TIMER%.timer}"
-    else
-        box "[--] ${TIMER%.timer}"
-    fi
-
+for timer in $FUMETAOS_TIMERS; do
+	if unit_is_active "$timer"; then
+		box "[OK] ${timer%.timer}"
+	else
+		box "[--] ${timer%.timer}"
+	fi
 done
-
-
 
 box "SISTEMA"
 
-
-for SERVICE in $SYSTEM_SERVICES
-do
-
-    if service_state "$SERVICE" | grep -q active
-    then
-        box "[OK] $SERVICE"
-    else
-        box "[--] $SERVICE"
-    fi
-
+for service in $SYSTEM_SERVICES; do
+	if unit_is_active "$service"; then
+		box "[OK] $service"
+	else
+		box "[--] $service"
+	fi
 done
 
-
-
 separator
-
 
 box "ALMACENAMIENTO"
 
-
 box "SSD Sistema: ${SYSTEM_DISK} %"
-
 box "HDD Datos:   ${DATA_DISK} %"
-
-
 
 separator
 
-
 box "ACTUALIZACIONES: $UPDATES"
-
 
 bottom

@@ -7,74 +7,49 @@
 
 ERROR=0
 
+run_monitor() {
+	local title="$1"
+	local script="$2"
+	local status
 
-echo "🛠️ Servicios"
-/opt/fumetaos/modules/monitor/services.sh
-RET=$?
+	echo "$title"
 
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
+	"$script"
+	status=$?
 
+	if [ "$status" -gt "$ERROR" ]; then
+		ERROR="$status"
+	fi
 
-echo
-echo "⏱️ Timers FumetaOS"
-/opt/fumetaos/modules/monitor/timers.sh
-RET=$?
+	echo
+}
 
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
+run_monitor \
+	"🛠️ Servicios" \
+	/opt/fumetaos/modules/monitor/services.sh
 
+run_monitor \
+	"⏱️ Timers FumetaOS" \
+	/opt/fumetaos/modules/monitor/timers.sh
 
-echo
-echo "💚 SMART"
-/opt/fumetaos/modules/monitor/smart.sh
-RET=$?
+run_monitor \
+	"💚 SMART" \
+	/opt/fumetaos/modules/monitor/smart.sh
 
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
+run_monitor \
+	"💾 Discos" \
+	/opt/fumetaos/modules/monitor/disks.sh
 
+run_monitor \
+	"🌡️ Temperatura" \
+	/opt/fumetaos/modules/monitor/temperature.sh
 
-echo
-echo "💾 Discos"
-/opt/fumetaos/modules/monitor/disks.sh
-RET=$?
+run_monitor \
+	"🧠 Memoria" \
+	/opt/fumetaos/modules/monitor/memory.sh
 
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
+run_monitor \
+	"📦 Actualizaciones" \
+	/opt/fumetaos/modules/monitor/updates.sh
 
-
-echo
-echo "🌡️ Temperatura"
-/opt/fumetaos/modules/monitor/temperature.sh
-RET=$?
-
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
-
-
-echo
-echo "🧠 Memoria"
-/opt/fumetaos/modules/monitor/memory.sh
-RET=$?
-
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
-
-
-echo
-echo "📦 Actualizaciones"
-/opt/fumetaos/modules/monitor/updates.sh
-RET=$?
-
-if [ "$RET" -gt "$ERROR" ]; then
-    ERROR=$RET
-fi
-
-
-exit $ERROR
+exit "$ERROR"

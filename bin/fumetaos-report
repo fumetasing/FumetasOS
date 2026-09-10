@@ -2,9 +2,11 @@
 
 ###########################################################
 # FumetaOS
-# Report
+# Informe diario
 ###########################################################
 
-/opt/fumetaos/bin/fumetaos-health \
-| /opt/fumetaos/bin/fumetaos-report-format \
-| /opt/fumetaos/bin/telegram-notify
+set -o pipefail
+
+/opt/fumetaos/bin/fumetaos-health |
+	/opt/fumetaos/bin/fumetaos-report-format |
+	/opt/fumetaos/bin/telegram-notify

@@ -1,124 +1,75 @@
 #!/bin/bash
 
 ###########################################################
-
 # FumetaOS
 # Services Core
-
 ###########################################################
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-
+unit_is_active() {
+	systemctl is-active --quiet "$1"
+}
 
 ###########################################################
 # Estado servicio
 ###########################################################
 
-service_state()
-{
-
-SERVICE="$1"
-
-if systemctl is-active --quiet "$SERVICE"
-then
-
-    echo "active"
-
-else
-
-    echo "inactive"
-
-fi
-
+service_state() {
+	if unit_is_active "$1"; then
+		echo "active"
+	else
+		echo "inactive"
+	fi
 }
-
-
 
 ###########################################################
 # Estado timer
 ###########################################################
 
-timer_state()
-{
-
-TIMER="$1"
-
-if systemctl is-active --quiet "$TIMER"
-then
-
-    echo "active"
-
-else
-
-    echo "inactive"
-
-fi
-
+timer_state() {
+	if unit_is_active "$1"; then
+		echo "active"
+	else
+		echo "inactive"
+	fi
 }
-
-
 
 ###########################################################
 # Mostrar servicios
 ###########################################################
 
-services_show()
-{
+services_show() {
+	local timer
+	local service
 
-echo
-echo "⚙️ Servicios FumetaOS"
-echo
+	echo
+	echo "⚙️ Servicios FumetaOS"
+	echo
 
+	echo "⏱️ Timers"
+	echo "─────────"
 
-echo "⏱️ Timers"
-echo "─────────"
+	for timer in $FUMETAOS_TIMERS; do
+		if unit_is_active "$timer"; then
+			echo "🟢 $timer"
+		else
+			echo "🔴 $timer"
+		fi
+	done
 
+	echo
 
-for TIMER in $FUMETAOS_TIMERS
-do
+	echo "🛠️ Sistema"
+	echo "──────────"
 
-    STATE=$(timer_state "$TIMER")
+	for service in $SYSTEM_SERVICES; do
+		if unit_is_active "$service"; then
+			echo "🟢 $service"
+		else
+			echo "🔴 $service"
+		fi
+	done
 
-    if [ "$STATE" = "active" ]
-    then
-
-        echo "🟢 $TIMER"
-
-    else
-
-        echo "🔴 $TIMER"
-
-    fi
-
-done
-
-
-echo
-
-echo "🛠️ Sistema"
-echo "──────────"
-
-
-for SERVICE in $SYSTEM_SERVICES
-do
-
-    STATE=$(service_state "$SERVICE")
-
-    if [ "$STATE" = "active" ]
-    then
-
-        echo "🟢 $SERVICE"
-
-    else
-
-        echo "🔴 $SERVICE"
-
-    fi
-
-done
-
-
-echo
-
+	echo
 }
