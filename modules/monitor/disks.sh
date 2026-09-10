@@ -9,59 +9,61 @@ source /opt/fumetaos/core/common.sh
 
 WATCH=0
 
-if [ "${1:-}" = "--watch" ]; then
+if [ "$1" = "--watch" ]; then
 	WATCH=1
 fi
 
 ERROR=0
 
 check_disk() {
-	local name="$1"
-	local mount="$2"
-	local free
-	local use
 
-	read -r free use < <(
-		df -P -h "$mount" |
-			awk 'NR == 2 {
-                gsub("%", "", $5)
-                print $4, $5
-            }'
-	)
+	DEVICE="$1"
+	NAME="$2"
+	MOUNT="$3"
 
-	if [ "$use" -lt "$DISK_WARNING" ]; then
+	USE=$(df "$MOUNT" | awk 'NR==2 {gsub("%","",$5); print $5}')
+	FREE=$(df -h "$MOUNT" | awk 'NR==2 {print $4}')
+
+	if [ "$USE" -lt "$DISK_WARNING" ]; then
+
 		if [ "$WATCH" -eq 0 ]; then
-			echo "🟢 $name"
-			echo "   Libre: $free"
-			echo "   Uso:   ${use}%"
+			echo "🟢 $NAME"
+			echo "   Libre: $FREE"
+			echo "   Uso:   ${USE}%"
 			echo
 		fi
-	elif [ "$use" -lt "$DISK_CRITICAL" ]; then
+
+	elif [ "$USE" -lt "$DISK_CRITICAL" ]; then
+
 		if [ "$WATCH" -eq 0 ]; then
-			echo "🟡 $name"
-			echo "   Libre: $free"
-			echo "   Uso:   ${use}%"
+			echo "🟡 $NAME"
+			echo "   Libre: $FREE"
+			echo "   Uso:   ${USE}%"
 			echo
 		else
-			echo "$name al ${use}%"
+			echo "$NAME al ${USE}%"
 		fi
 
 		ERROR=10
+
 	else
+
 		if [ "$WATCH" -eq 0 ]; then
-			echo "🔴 $name"
-			echo "   Libre: $free"
-			echo "   Uso:   ${use}%"
+			echo "🔴 $NAME"
+			echo "   Libre: $FREE"
+			echo "   Uso:   ${USE}%"
 			echo
 		else
-			echo "$name al ${use}%"
+			echo "$NAME al ${USE}%"
 		fi
 
 		ERROR=20
+
 	fi
+
 }
 
-check_disk "$SSD_NAME" "/"
-check_disk "$HDD_NAME" "/mnt/datos"
+check_disk "$SSD_DEVICE" "$SSD_NAME" "/"
+check_disk "$HDD_DEVICE" "$HDD_NAME" "/mnt/datos"
 
-exit "$ERROR"
+exit $ERROR

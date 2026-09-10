@@ -1,26 +1,32 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
 # Services Core
+
 ###########################################################
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-
-unit_is_active() {
-	systemctl is-active --quiet "$1"
-}
 
 ###########################################################
 # Estado servicio
 ###########################################################
 
 service_state() {
-	if unit_is_active "$1"; then
+
+	SERVICE="$1"
+
+	if systemctl is-active --quiet "$SERVICE"; then
+
 		echo "active"
+
 	else
+
 		echo "inactive"
+
 	fi
+
 }
 
 ###########################################################
@@ -28,11 +34,19 @@ service_state() {
 ###########################################################
 
 timer_state() {
-	if unit_is_active "$1"; then
+
+	TIMER="$1"
+
+	if systemctl is-active --quiet "$TIMER"; then
+
 		echo "active"
+
 	else
+
 		echo "inactive"
+
 	fi
+
 }
 
 ###########################################################
@@ -40,8 +54,6 @@ timer_state() {
 ###########################################################
 
 services_show() {
-	local timer
-	local service
 
 	echo
 	echo "⚙️ Servicios FumetaOS"
@@ -50,12 +62,20 @@ services_show() {
 	echo "⏱️ Timers"
 	echo "─────────"
 
-	for timer in $FUMETAOS_TIMERS; do
-		if unit_is_active "$timer"; then
-			echo "🟢 $timer"
+	for TIMER in $FUMETAOS_TIMERS; do
+
+		STATE=$(timer_state "$TIMER")
+
+		if [ "$STATE" = "active" ]; then
+
+			echo "🟢 $TIMER"
+
 		else
-			echo "🔴 $timer"
+
+			echo "🔴 $TIMER"
+
 		fi
+
 	done
 
 	echo
@@ -63,13 +83,22 @@ services_show() {
 	echo "🛠️ Sistema"
 	echo "──────────"
 
-	for service in $SYSTEM_SERVICES; do
-		if unit_is_active "$service"; then
-			echo "🟢 $service"
+	for SERVICE in $SYSTEM_SERVICES; do
+
+		STATE=$(service_state "$SERVICE")
+
+		if [ "$STATE" = "active" ]; then
+
+			echo "🟢 $SERVICE"
+
 		else
-			echo "🔴 $service"
+
+			echo "🔴 $SERVICE"
+
 		fi
+
 	done
 
 	echo
+
 }

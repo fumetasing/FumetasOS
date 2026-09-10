@@ -10,12 +10,13 @@ source /opt/fumetaos/core/system.sh
 source /opt/fumetaos/core/apps.sh
 source /opt/fumetaos/core/services.sh
 
+WIDTH=42
 INNER=40
 
+VERSION="desconocida"
+
 if [ -f "$VERSION_FILE" ]; then
-	VERSION="$(<"$VERSION_FILE")"
-else
-	VERSION="desconocida"
+	VERSION=$(cat "$VERSION_FILE")
 fi
 
 ###########################################################
@@ -23,10 +24,7 @@ fi
 ###########################################################
 
 line() {
-	local line
-
-	printf -v line '%*s' "$INNER" ''
-	printf '%s' "${line// /═}"
+	printf '═%.0s' $(seq 1 $INNER)
 }
 
 top() {
@@ -42,22 +40,25 @@ separator() {
 }
 
 box() {
-	local text="$1"
+	TEXT="$1"
 
-	printf "║ %-38s ║\n" "$text"
+	printf "║ %-38s ║\n" "$TEXT"
 }
 
 ###########################################################
 # Datos
 ###########################################################
 
-CPU="$(cpu_temp)"
-RAM="$(ram_usage)"
-SYSTEM_DISK="$(df / | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
-DATA_DISK="$(disk_usage)"
-UPDATES="$(updates_available)"
+CPU=$(cpu_temp)
+RAM=$(ram_usage)
 
-if /opt/fumetaos/bin/fumetaos-health --check >/dev/null 2>&1; then
+SYSTEM_DISK=$(df / | awk 'NR==2 {gsub("%","",$5);print $5}')
+
+DATA_DISK=$(disk_usage)
+
+UPDATES=$(updates_available)
+
+if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1; then
 	STATUS="PERFECTO"
 else
 	STATUS="AVISOS"
@@ -80,26 +81,32 @@ separator
 box "RECURSOS"
 
 box "CPU:              ${CPU} C"
+
 box "RAM:              ${RAM} %"
+
 box "SISTEMA:          ${SYSTEM_DISK} %"
 
 separator
 
 box "APLICACIONES"
 
-while IFS= read -r app; do
-	app_load "$app"
+for APP in $(app_list); do
+
+	app_load "$APP"
 
 	if app_running; then
-		icon="[OK]"
+		ICON="[OK]"
 	else
-		icon="[--]"
+		ICON="[--]"
 	fi
 
-	box "$icon $APP_NAME"
+	box "$ICON $APP_NAME"
+
 	box "     Version: $APP_VERSION"
+
 	box "     Health: $(app_health)"
-done < <(app_list)
+
+done
 
 separator
 
@@ -107,22 +114,26 @@ box "SERVICIOS"
 
 box "TIMERS FUMETAOS"
 
-for timer in $FUMETAOS_TIMERS; do
-	if unit_is_active "$timer"; then
-		box "[OK] ${timer%.timer}"
+for TIMER in $FUMETAOS_TIMERS; do
+
+	if timer_state "$TIMER" | grep -q active; then
+		box "[OK] ${TIMER%.timer}"
 	else
-		box "[--] ${timer%.timer}"
+		box "[--] ${TIMER%.timer}"
 	fi
+
 done
 
 box "SISTEMA"
 
-for service in $SYSTEM_SERVICES; do
-	if unit_is_active "$service"; then
-		box "[OK] $service"
+for SERVICE in $SYSTEM_SERVICES; do
+
+	if service_state "$SERVICE" | grep -q active; then
+		box "[OK] $SERVICE"
 	else
-		box "[--] $service"
+		box "[--] $SERVICE"
 	fi
+
 done
 
 separator
@@ -130,6 +141,7 @@ separator
 box "ALMACENAMIENTO"
 
 box "SSD Sistema: ${SYSTEM_DISK} %"
+
 box "HDD Datos:   ${DATA_DISK} %"
 
 separator

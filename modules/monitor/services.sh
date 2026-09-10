@@ -1,34 +1,43 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
+
 # Monitor de servicios
+
 ###########################################################
 
-source "$(dirname "${BASH_SOURCE[0]}")/../../core/services.sh"
+source "$(dirname "$0")/../../core/common.sh"
 
 WATCH=0
 
-if [ "${1:-}" = "--watch" ]; then
+if [ "$1" = "--watch" ]; then
 	WATCH=1
 fi
 
 ERROR=0
 
-for service in $SYSTEM_SERVICES; do
-	if unit_is_active "$service"; then
+for SERVICE in $SYSTEM_SERVICES; do
+
+	if systemctl is-active --quiet "$SERVICE"; then
+
 		if [ "$WATCH" -eq 0 ]; then
-			echo "✅ $service"
+			echo "✅ $SERVICE"
 		fi
+
 	else
+
 		if [ "$WATCH" -eq 0 ]; then
-			echo "🚨 $service"
+			echo "🚨 $SERVICE"
 		else
-			echo "Servicio detenido: $service"
+			echo "Servicio detenido: $SERVICE"
 		fi
 
 		ERROR=20
+
 	fi
+
 done
 
-exit "$ERROR"
+exit $ERROR

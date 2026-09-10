@@ -1,23 +1,33 @@
 #!/bin/bash
 
 ###########################################################
+
 # FumetaOS
-# Monitor de temporizadores
+
+# Monitor de timers
+
 ###########################################################
 
-source "$(dirname "${BASH_SOURCE[0]}")/../../core/services.sh"
+source "$(dirname "$0")/../../core/common.sh"
 
 ERROR=0
 
 echo
 
-for timer in $FUMETAOS_TIMERS; do
-	if unit_is_active "$timer"; then
-		echo "✅ $timer"
+for TIMER in $FUMETAOS_TIMERS; do
+
+	if systemctl is-active --quiet "$TIMER"; then
+
+		echo "✅ $TIMER"
+
 	else
-		echo "🚨 $timer"
+
+		echo "🚨 $TIMER"
+
 		ERROR=20
+
 	fi
+
 done
 
 exit "$ERROR"

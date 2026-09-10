@@ -8,72 +8,49 @@
 source /opt/fumetaos/core/common.sh
 
 WATCH=0
+
+[ "$1" = "--watch" ] && WATCH=1
+
 ERROR=0
 
-if [ "${1:-}" = "--watch" ]; then
-	WATCH=1
-fi
+for DISK in "$HDD_DEVICE" "$SSD_DEVICE"; do
 
-elevar_error() {
-	if [ "$1" -gt "$ERROR" ]; then
-		ERROR="$1"
+	NAME=$(disk_name "$DISK")
+
+	SALIDA=$(smartctl_cmd -H "$DISK" 2>/dev/null)
+	RET=$?
+
+	if [ "$RET" -ne 0 ]; then
+
+		if [ "$WATCH" -eq 0 ]; then
+			echo "⚠️ $NAME (no se ha podido comprobar)"
+		else
+			echo "No se ha podido comprobar SMART de $NAME"
+		fi
+
+		[ "$ERROR" -lt 10 ] && ERROR=10
+		continue
+
 	fi
-}
 
-mostrar_correcto() {
-	local name="$1"
+	if echo "$SALIDA" | grep -q "PASSED"; then
 
-	if [ "$WATCH" -eq 0 ]; then
-		echo "✅ $name"
-	fi
-}
+		if [ "$WATCH" -eq 0 ]; then
+			echo "✅ $NAME"
+		fi
 
-mostrar_no_disponible() {
-	local name="$1"
-
-	if [ "$WATCH" -eq 0 ]; then
-		echo "⚠️ $name (no se ha podido comprobar)"
 	else
-		echo "No se ha podido comprobar SMART de $name"
+
+		if [ "$WATCH" -eq 0 ]; then
+			echo "🚨 $NAME"
+		else
+			echo "Problema SMART en $NAME"
+		fi
+
+		ERROR=20
+
 	fi
 
-	elevar_error 10
-}
-
-mostrar_fallo() {
-	local name="$1"
-
-	if [ "$WATCH" -eq 0 ]; then
-		echo "🚨 $name"
-	else
-		echo "Problema SMART en $name"
-	fi
-
-	elevar_error 20
-}
-
-comprobar_disco() {
-	local disk="$1"
-	local name
-	local output
-
-	name="$(disk_name "$disk")"
-	output="$(smartctl_cmd -H "$disk" 2>&1)"
-
-	case "$output" in
-	*PASSED*)
-		mostrar_correcto "$name"
-		;;
-	*FAILED*)
-		mostrar_fallo "$name"
-		;;
-	*)
-		mostrar_no_disponible "$name"
-		;;
-	esac
-}
-
-comprobar_disco "$HDD_DEVICE"
-comprobar_disco "$SSD_DEVICE"
+done
 
 exit "$ERROR"
