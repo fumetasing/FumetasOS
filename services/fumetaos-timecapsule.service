@@ -2,14 +2,21 @@
 Description=Montaje AFP de la Time Capsule para CasaOS
 After=network-online.target
 Wants=network-online.target
+Before=docker.service casaos.service fumetaos-timecapsule-casaos.service
+StartLimitIntervalSec=10min
+StartLimitBurst=12
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 User=root
+LimitNOFILE=1024:1024
+Restart=on-failure
+RestartSec=15s
 TimeoutStartSec=90s
 TimeoutStopSec=30s
 ExecStart=/opt/fumetaos/bin/fumetaos-timecapsule mount
+ExecStartPost=/usr/bin/systemctl --no-block restart fumetaos-timecapsule-casaos.service
 ExecStop=/opt/fumetaos/bin/fumetaos-timecapsule unmount
 
 [Install]

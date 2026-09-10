@@ -1,13 +1,15 @@
 [Unit]
 Description=Mostrar Time Capsule dentro de Datos para CasaOS
+Requires=fumetaos-timecapsule.service
 BindsTo=fumetaos-timecapsule.service
 After=fumetaos-timecapsule.service
-Before=casaos.service
+Before=docker.service casaos.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 User=root
+ExecStartPre=/usr/bin/findmnt -rn -M /mnt/timecapsule
 ExecStart=/usr/bin/mount --bind /mnt/timecapsule /DATA/TimeCapsule
 ExecStop=/usr/bin/umount /DATA/TimeCapsule
 
