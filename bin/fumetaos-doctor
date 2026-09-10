@@ -17,12 +17,12 @@ check()
     DESCRIPCION="$1"
     shift
 
-    TOTAL=$((TOTAL+1))
+    TOTAL=$((TOTAL + 1))
 
     if "$@"
     then
         echo "✅ $DESCRIPCION"
-        PUNTOS=$((PUNTOS+1))
+        PUNTOS=$((PUNTOS + 1))
     else
         echo "❌ $DESCRIPCION"
     fi
@@ -30,7 +30,8 @@ check()
 
 firewall_active()
 {
-    sudo ufw status 2>/dev/null | grep -q "Status: active"
+    sudo ufw status 2>/dev/null |
+        grep -q "Status: active"
 }
 
 mac_backup_after_timecapsule()
@@ -44,6 +45,18 @@ daily_upgrade_timer()
     systemctl is-active --quiet fumetaos-system-upgrade.timer &&
         systemctl cat fumetaos-system-upgrade.timer 2>/dev/null |
             grep -Fqx 'OnCalendar=*-*-* 05:30:00'
+}
+
+backup_disponible()
+{
+    find /mnt/datos/backups/fumetaos \
+        -maxdepth 1 \
+        -type f \
+        -name 'fumetaos-backup-*' \
+        -print \
+        -quit \
+        2>/dev/null |
+        grep -q .
 }
 
 echo
@@ -101,12 +114,12 @@ for APP in $(app_list)
 do
     app_load "$APP"
 
-    TOTAL=$((TOTAL+1))
+    TOTAL=$((TOTAL + 1))
 
     if app_running
     then
         echo "✅ $APP_NAME"
-        PUNTOS=$((PUNTOS+1))
+        PUNTOS=$((PUNTOS + 1))
     else
         echo "❌ $APP_NAME"
     fi
@@ -126,7 +139,7 @@ echo
 echo "💾 Datos"
 echo
 
-check "Backup disponible" test -n "$(ls /mnt/datos/backups/fumetaos/fumetaos-backup-* 2>/dev/null | head -1)"
+check "Backup disponible" backup_disponible
 check "Histórico funcionando" test -s "$DATA_DIR/history.log"
 
 echo
