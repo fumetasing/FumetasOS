@@ -23,24 +23,20 @@ DRY_RUN=()
 ALLOW_LARGE_DELETE=0
 CURRENT_STEP="Preparación"
 
-RSYNC_FILTER_OPTIONS=(
-	--exclude='/lost+found/'
-	--exclude='/TimeCapsule/'
-	--filter='P /TimeCapsule/***'
-)
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../core/mac-mirror-common.sh"
 
-mostrar_error() {
-	echo "❌ $1"
-	exit 20
+mostrar_error()
+{
+    echo "❌ $1"
+    exit 20
 }
 
-notificar_error() {
-	local status="$1"
+notificar_error()
+{
+    local status="$1"
 
-	mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
+    mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
 
 La copia de datos al Mac ha fallado.
 
@@ -50,106 +46,134 @@ Código: $status
 ⏱️ $(date '+%d/%m/%Y %H:%M')"
 }
 
-manejar_error() {
-	local status="$?"
+manejar_error()
+{
+    local status="$?"
 
-	trap - ERR
+    trap - ERR
 
-	echo
-	echo "🔴 La copia de datos al Mac ha fallado en: $CURRENT_STEP"
+    echo
+    echo "🔴 La copia de datos al Mac ha fallado en: $CURRENT_STEP"
 
-	notificar_error "$status"
+    notificar_error "$status"
 
-	exit "$status"
+    exit "$status"
 }
 
-comprobar_borrados_previstos() {
-	local deletes
+comprobar_borrados_previstos()
+{
+    local deletes
 
-	deletes="$(
-		mac_mirror_contar_borrados \
-			"$SOURCE_DIR" \
-			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
-			"${RSYNC_FILTER_OPTIONS[@]}"
-	)"
+    deletes="$(
+        rsync \
+            -aH \
+            --no-owner \
+            --no-group \
+            --dry-run \
+            --delete-delay \
+            --itemize-changes \
+            --out-format='%i' \
+            --exclude='/lost+found/' \
+            --exclude='/TimeCapsule/' \
+            --filter='P /TimeCapsule/***' \
+            -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+            "$SOURCE_DIR" \
+            "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" |
+            awk '$0 == "*deleting" { count++ } END { print count + 0 }'
+    )"
 
-	if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
-		echo "❌ Se cancelarían $deletes borrados; límite: $DELETE_LIMIT"
-		echo "ℹ️ Revisa el origen y el destino antes de usar --allow-large-delete"
-		exit 20
-	fi
+    if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
+        echo "❌ Se cancelarían $deletes borrados; límite: $DELETE_LIMIT"
+        echo "ℹ️ Revisa el origen y el destino antes de usar --allow-large-delete"
+        exit 20
+    fi
 }
 
-ejecutar_rsync_con_reintentos() {
-	local attempt=1
-	local status=20
+ejecutar_rsync_con_reintentos()
+{
+    local attempt=1
+    local status=20
 
-	while [ "$attempt" -le "$MAX_RETRIES" ]; do
-		CURRENT_STEP="Validación del USB antes del intento $attempt de datos"
+    while [ "$attempt" -le "$MAX_RETRIES" ]
+    do
+        CURRENT_STEP="Validación del USB antes del intento $attempt de datos"
 
-		mac_mirror_usb_disponible ||
-			mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+        mac_mirror_usb_disponible ||
+            mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
 
-		CURRENT_STEP="Copia espejo de /mnt/datos"
+        CURRENT_STEP="Copia espejo de /mnt/datos"
 
-		echo "🔄 Intento $attempt/$MAX_RETRIES: datos"
+        echo "🔄 Intento $attempt/$MAX_RETRIES: datos"
 
-		if mac_mirror_copiar \
-			"$SOURCE_DIR" \
-			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
-			"${RSYNC_FILTER_OPTIONS[@]}"; then
-			return 0
-		fi
+        if rsync \
+            -aH \
+            --no-owner \
+            --no-group \
+            --delete-delay \
+            --partial \
+            --human-readable \
+            --stats \
+            --exclude='/lost+found/' \
+            --exclude='/TimeCapsule/' \
+            --filter='P /TimeCapsule/***' \
+            "${DRY_RUN[@]}" \
+            -e "ssh -i $SSH_KEY -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=6 -o UserKnownHostsFile=$SSH_KNOWN_HOSTS -o StrictHostKeyChecking=yes" \
+            "$SOURCE_DIR" \
+            "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/"
+        then
+            return 0
+        fi
 
-		status="$?"
+        status="$?"
 
-		if [ "$attempt" -lt "$MAX_RETRIES" ]; then
-			echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de datos. Reintentando en $RETRY_DELAY segundos..."
-			sleep "$RETRY_DELAY"
-		fi
+        if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+            echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de datos. Reintentando en $RETRY_DELAY segundos..."
+            sleep "$RETRY_DELAY"
+        fi
 
-		attempt=$((attempt + 1))
-	done
+        attempt=$((attempt + 1))
+    done
 
-	return "$status"
+    return "$status"
 }
 
 case "${1:-}" in
-"") ;;
---dry-run)
-	DRY_RUN=(--dry-run)
-	;;
---allow-large-delete)
-	ALLOW_LARGE_DELETE=1
-	;;
-*)
-	echo "Uso:"
-	echo "fumetaos-mac-backup"
-	echo "fumetaos-mac-backup --dry-run"
-	echo "fumetaos-mac-backup --allow-large-delete"
-	exit 20
-	;;
+    "")
+        ;;
+    --dry-run)
+        DRY_RUN=(--dry-run)
+        ;;
+    --allow-large-delete)
+        ALLOW_LARGE_DELETE=1
+        ;;
+    *)
+        echo "Uso:"
+        echo "fumetaos-mac-backup"
+        echo "fumetaos-mac-backup --dry-run"
+        echo "fumetaos-mac-backup --allow-large-delete"
+        exit 20
+        ;;
 esac
 
 [ "$(id -u)" -eq 0 ] ||
-	mostrar_error "Esta copia debe ejecutarse como root"
+    mostrar_error "Esta copia debe ejecutarse como root"
 
 [ -d "$SOURCE_DIR" ] ||
-	mostrar_error "No existe el origen: $SOURCE_DIR"
+    mostrar_error "No existe el origen: $SOURCE_DIR"
 
 mountpoint -q /mnt/datos ||
-	mostrar_error "/mnt/datos no está montado"
+    mostrar_error "/mnt/datos no está montado"
 
 [ -r "$SSH_KEY" ] ||
-	mostrar_error "No existe la clave SSH: $SSH_KEY"
+    mostrar_error "No existe la clave SSH: $SSH_KEY"
 
 [ -r "$SSH_KNOWN_HOSTS" ] ||
-	mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
+    mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
 
 exec 9>"$LOCK_FILE"
 
 flock -n 9 ||
-	mostrar_error "Ya hay una copia al Mac en curso"
+    mostrar_error "Ya hay una copia al Mac en curso"
 
 mac_mirror_crear_ssh_command
 
@@ -164,17 +188,18 @@ echo
 CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
 
 mac_mirror_usb_disponible ||
-	mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+    mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
 
 "${SSH_COMMAND[@]}" \
-	"$MAC_USER@$MAC_HOST" \
-	"test -d '$MAC_DESTINATION'" ||
-	mostrar_error "El Mac o el disco USB no están disponibles"
+    "$MAC_USER@$MAC_HOST" \
+    "test -d '$MAC_DESTINATION'" ||
+    mostrar_error "El Mac o el disco USB no están disponibles"
 
 if [ "${#DRY_RUN[@]}" -eq 0 ] &&
-	[ "$ALLOW_LARGE_DELETE" -eq 0 ]; then
-	CURRENT_STEP="Comprobación de borrados previstos"
-	comprobar_borrados_previstos
+   [ "$ALLOW_LARGE_DELETE" -eq 0 ]
+then
+    CURRENT_STEP="Comprobación de borrados previstos"
+    comprobar_borrados_previstos
 fi
 
 ejecutar_rsync_con_reintentos
@@ -184,7 +209,7 @@ trap - ERR
 echo
 
 if [ "${#DRY_RUN[@]}" -gt 0 ]; then
-	echo "✅ Simulación completada: no se ha copiado ni borrado nada"
+    echo "✅ Simulación completada: no se ha copiado ni borrado nada"
 else
-	echo "✅ Copia espejo completada"
+    echo "✅ Copia espejo completada"
 fi

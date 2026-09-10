@@ -23,7 +23,7 @@ DATA_MOUNT="${DATA_MOUNT:-/mnt/datos}"
 
 cpu_temp() {
 
-	sensors | awk '/Package id 0:/ {
+    sensors | awk '/Package id 0:/ {
         gsub("\\+|°C","",$4)
         print int($4)
     }'
@@ -36,37 +36,39 @@ cpu_temp() {
 
 ram_usage() {
 
-	free | awk '/Mem:/ {
+    free | awk '/Mem:/ {
         printf "%.0f", $3/$2*100
     }'
 
 }
 
+
 ram_total() {
 
-	TOTAL=$(awk '/MemTotal/ {printf "%.0f", $2/1024/1024}' /proc/meminfo)
+    TOTAL=$(awk '/MemTotal/ {printf "%.0f", $2/1024/1024}' /proc/meminfo)
 
-	if [ "$TOTAL" -le 2 ]; then
-		echo "2 GB"
-	elif [ "$TOTAL" -le 4 ]; then
-		echo "4 GB"
-	elif [ "$TOTAL" -le 8 ]; then
-		echo "8 GB"
-	elif [ "$TOTAL" -le 16 ]; then
-		echo "16 GB"
-	elif [ "$TOTAL" -le 32 ]; then
-		echo "32 GB"
-	elif [ "$TOTAL" -le 64 ]; then
-		echo "64 GB"
-	else
-		echo "${TOTAL} GB"
-	fi
+    if [ "$TOTAL" -le 2 ]; then
+        echo "2 GB"
+    elif [ "$TOTAL" -le 4 ]; then
+        echo "4 GB"
+    elif [ "$TOTAL" -le 8 ]; then
+        echo "8 GB"
+    elif [ "$TOTAL" -le 16 ]; then
+        echo "16 GB"
+    elif [ "$TOTAL" -le 32 ]; then
+        echo "32 GB"
+    elif [ "$TOTAL" -le 64 ]; then
+        echo "64 GB"
+    else
+        echo "${TOTAL} GB"
+    fi
 
 }
 
+
 ram_used() {
 
-	free -m | awk '/Mem:/ {
+    free -m | awk '/Mem:/ {
         printf "%.0f MB", $3
     }'
 
@@ -78,16 +80,17 @@ ram_used() {
 
 disk_usage() {
 
-	df "$DATA_MOUNT" | awk 'NR==2 {
+    df "$DATA_MOUNT" | awk 'NR==2 {
         gsub("%","",$5)
         print $5
     }'
 
 }
 
+
 disk_free() {
 
-	df -h "$DATA_MOUNT" | awk 'NR==2 {
+    df -h "$DATA_MOUNT" | awk 'NR==2 {
         print $4
     }'
 
@@ -99,6 +102,6 @@ disk_free() {
 
 updates_available() {
 
-	apt list --upgradable 2>/dev/null | tail -n +2 | wc -l
+    apt list --upgradable 2>/dev/null | tail -n +2 | wc -l
 
 }

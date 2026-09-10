@@ -18,11 +18,11 @@ source "$CORE_DIR/system.sh"
 
 if [ -f "$VERSION_FILE" ]; then
 
-	FUMETAOS_VERSION="$(cat "$VERSION_FILE")"
+    FUMETAOS_VERSION="$(cat "$VERSION_FILE")"
 
 else
 
-	FUMETAOS_VERSION="desconocida"
+    FUMETAOS_VERSION="desconocida"
 
 fi
 

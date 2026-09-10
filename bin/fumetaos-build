@@ -9,6 +9,7 @@ SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
 
 PACKAGE="/opt/fumetaos/install/package"
 
+
 echo
 echo "🏗️ FumetaOS Package Builder"
 echo
@@ -23,65 +24,75 @@ echo "$PACKAGE"
 
 echo
 
+
 if [ ! -d "$PACKAGE" ]; then
 
-	echo "📁 Creando paquete"
+    echo "📁 Creando paquete"
 
-	sudo mkdir -p "$PACKAGE"
+    sudo mkdir -p "$PACKAGE"
 
 fi
+
 
 echo "🧹 Limpiando paquete anterior"
 
 sudo rm -rf \
-	"$PACKAGE/bin" \
-	"$PACKAGE/core" \
-	"$PACKAGE/modules" \
-	"$PACKAGE/apps" \
-	"$PACKAGE/config" \
-	"$PACKAGE/services"
+"$PACKAGE/bin" \
+"$PACKAGE/core" \
+"$PACKAGE/modules" \
+"$PACKAGE/apps" \
+"$PACKAGE/config" \
+"$PACKAGE/services"
+
 
 echo "📦 Copiando bin"
 
 sudo cp -r \
-	"$SOURCE/bin" \
-	"$PACKAGE/"
+"$SOURCE/bin" \
+"$PACKAGE/"
+
 
 echo "📦 Copiando core"
 
 sudo cp -r \
-	"$SOURCE/core" \
-	"$PACKAGE/"
+"$SOURCE/core" \
+"$PACKAGE/"
+
 
 echo "📦 Copiando módulos"
 
 sudo cp -r \
-	"$SOURCE/modules" \
-	"$PACKAGE/"
+"$SOURCE/modules" \
+"$PACKAGE/"
+
 
 echo "📦 Copiando apps"
 
 sudo cp -r \
-	"$SOURCE/apps" \
-	"$PACKAGE/"
+"$SOURCE/apps" \
+"$PACKAGE/"
+
 
 echo "📦 Copiando servicios"
 
 sudo cp -r \
-	"$SOURCE/services" \
-	"$PACKAGE/"
+"$SOURCE/services" \
+"$PACKAGE/"
+
 
 echo "📦 Copiando configuración"
 
 sudo cp -r \
-	"$SOURCE/config" \
-	"$PACKAGE/"
+"$SOURCE/config" \
+"$PACKAGE/"
+
 
 echo "🏷️ Copiando versión"
 
 sudo cp \
-	"$SOURCE/VERSION" \
-	"$PACKAGE/VERSION"
+"$SOURCE/VERSION" \
+"$PACKAGE/VERSION"
+
 
 echo
 
@@ -92,6 +103,7 @@ sudo chmod -R 755 "$PACKAGE/core"
 sudo chmod -R 755 "$PACKAGE/modules"
 sudo chmod -R 755 "$PACKAGE/apps"
 sudo chmod -R 755 "$PACKAGE/services"
+
 
 echo
 

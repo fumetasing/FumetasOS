@@ -7,29 +7,36 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-generate_compose() {
 
-	APP_PATH="$1"
+generate_compose()
+{
 
-	[ -f "$APP_PATH/app.conf" ] || return 1
+APP_PATH="$1"
 
-	source "$APP_PATH/app.conf"
+[ -f "$APP_PATH/app.conf" ] || return 1
 
-	mkdir -p "$APP_DATA"
 
-	FILE="$APP_DATA/compose.yaml"
+source "$APP_PATH/app.conf"
 
-	###########################################################
-	# Puerto CasaOS
-	###########################################################
 
-	CASAOS_PORT_MAP="${APP_PORT_MAP:-$APP_PORT}"
+mkdir -p "$APP_DATA"
 
-	###########################################################
-	# Compose base
-	###########################################################
 
-	cat >"$FILE" <<EOF_COMPOSE
+FILE="$APP_DATA/compose.yaml"
+
+
+###########################################################
+# Puerto CasaOS
+###########################################################
+
+CASAOS_PORT_MAP="${APP_PORT_MAP:-$APP_PORT}"
+
+
+###########################################################
+# Compose base
+###########################################################
+
+cat > "$FILE" <<EOF_COMPOSE
 services:
 
   $APP_ID:
@@ -40,92 +47,103 @@ services:
 
 EOF_COMPOSE
 
-	###########################################################
-	# Puertos
-	###########################################################
 
-	if [ -n "$APP_PORT" ] || [ -n "$APP_PORTS" ]; then
+###########################################################
+# Puertos
+###########################################################
 
-		echo "    ports:" >>"$FILE"
+if [ -n "$APP_PORT" ] || [ -n "$APP_PORTS" ]; then
 
-		if [ -n "$APP_PORT" ]; then
+echo "    ports:" >> "$FILE"
 
-			echo "      - \"$APP_PORT:$APP_PORT\"" >>"$FILE"
 
-		fi
+if [ -n "$APP_PORT" ]; then
 
-		if [ -n "$APP_PORTS" ]; then
+echo "      - \"$APP_PORT:$APP_PORT\"" >> "$FILE"
 
-			while IFS= read -r PORT_LINE; do
+fi
 
-				[ -z "$PORT_LINE" ] && continue
 
-				echo "      - \"$PORT_LINE\"" >>"$FILE"
+if [ -n "$APP_PORTS" ]; then
 
-			done <<<"$APP_PORTS"
+while IFS= read -r PORT_LINE
+do
 
-		fi
+    [ -z "$PORT_LINE" ] && continue
 
-		echo >>"$FILE"
+    echo "      - \"$PORT_LINE\"" >> "$FILE"
 
-	fi
+done <<< "$APP_PORTS"
 
-	###########################################################
-	# Variables de entorno
-	###########################################################
+fi
 
-	if [ -n "$APP_ENV" ]; then
 
-		echo "    environment:" >>"$FILE"
+echo >> "$FILE"
 
-		while IFS= read -r ENV_LINE; do
+fi
 
-			[ -z "$ENV_LINE" ] && continue
 
-			echo "      - \"$ENV_LINE\"" >>"$FILE"
+###########################################################
+# Variables de entorno
+###########################################################
 
-		done <<<"$APP_ENV"
+if [ -n "$APP_ENV" ]; then
 
-		echo >>"$FILE"
+echo "    environment:" >> "$FILE"
 
-	fi
+while IFS= read -r ENV_LINE
+do
 
-	###########################################################
-	# Volúmenes
-	###########################################################
+    [ -z "$ENV_LINE" ] && continue
 
-	if [ -n "$APP_VOLUMES" ]; then
+    echo "      - \"$ENV_LINE\"" >> "$FILE"
 
-		echo "    volumes:" >>"$FILE"
+done <<< "$APP_ENV"
 
-		while IFS= read -r VOLUME_LINE; do
+echo >> "$FILE"
 
-			[ -z "$VOLUME_LINE" ] && continue
+fi
 
-			echo "      - $VOLUME_LINE" >>"$FILE"
 
-		done <<<"$APP_VOLUMES"
+###########################################################
+# Volúmenes
+###########################################################
 
-		echo >>"$FILE"
+if [ -n "$APP_VOLUMES" ]; then
 
-	fi
+echo "    volumes:" >> "$FILE"
 
-	###########################################################
-	# Reinicio
-	###########################################################
+while IFS= read -r VOLUME_LINE
+do
 
-	cat >>"$FILE" <<EOF_RESTART
+    [ -z "$VOLUME_LINE" ] && continue
+
+    echo "      - $VOLUME_LINE" >> "$FILE"
+
+done <<< "$APP_VOLUMES"
+
+echo >> "$FILE"
+
+fi
+
+
+###########################################################
+# Reinicio
+###########################################################
+
+cat >> "$FILE" <<EOF_RESTART
     restart: unless-stopped
 
 EOF_RESTART
 
-	###########################################################
-	# Label del icono
-	###########################################################
 
-	if [ -n "$APP_ICON_URL" ]; then
+###########################################################
+# Label del icono
+###########################################################
 
-		cat >>"$FILE" <<EOF_LABELS
+if [ -n "$APP_ICON_URL" ]; then
+
+cat >> "$FILE" <<EOF_LABELS
 
     labels:
 
@@ -133,13 +151,14 @@ EOF_RESTART
 
 EOF_LABELS
 
-	fi
+fi
 
-	###########################################################
-	# Metadata CasaOS
-	###########################################################
 
-	cat >>"$FILE" <<EOF_CASAOS
+###########################################################
+# Metadata CasaOS
+###########################################################
+
+cat >> "$FILE" <<EOF_CASAOS
 
 x-casaos:
 
@@ -192,47 +211,54 @@ x-casaos:
 
 EOF_CASAOS
 
-	echo
 
-	echo "✅ Compose generado"
+echo
 
-	echo "$FILE"
+echo "✅ Compose generado"
+
+echo "$FILE"
 
 }
 
-generate_app_structure() {
 
-	APP_PATH="$1"
+generate_app_structure()
+{
 
-	[ -f "$APP_PATH/app.conf" ] || return 1
+APP_PATH="$1"
 
-	source "$APP_PATH/app.conf"
+[ -f "$APP_PATH/app.conf" ] || return 1
 
-	mkdir -p "$APP_DATA"
 
-	mkdir -p "$APP_DATA/config"
+source "$APP_PATH/app.conf"
 
-	mkdir -p "$APP_DATA/cache"
 
-	###########################################################
-	# Scripts de aplicación
-	###########################################################
+mkdir -p "$APP_DATA"
 
-	if [ -d "$APP_PATH/scripts" ]; then
+mkdir -p "$APP_DATA/config"
 
-		mkdir -p "$APP_DATA/config/scripts"
+mkdir -p "$APP_DATA/cache"
 
-		cp -r "$APP_PATH/scripts/." \
-			"$APP_DATA/config/scripts/"
 
-		find "$APP_DATA/config/scripts" \
-			-type f \
-			-exec chmod 755 {} \;
+###########################################################
+# Scripts de aplicación
+###########################################################
 
-	fi
+if [ -d "$APP_PATH/scripts" ]; then
 
-	echo
+    mkdir -p "$APP_DATA/config/scripts"
 
-	echo "✅ Estructura creada"
+    cp -r "$APP_PATH/scripts/." \
+        "$APP_DATA/config/scripts/"
+
+    find "$APP_DATA/config/scripts" \
+        -type f \
+        -exec chmod 755 {} \;
+
+fi
+
+
+echo
+
+echo "✅ Estructura creada"
 
 }

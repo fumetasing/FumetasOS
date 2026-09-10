@@ -10,12 +10,13 @@ TORRENT_DIR="${TR_TORRENT_DIR}"
 TORRENT_NAME="${TR_TORRENT_NAME}"
 
 if [ -z "$TORRENT_ID" ]; then
-	exit 1
+    exit 1
 fi
 
 if [ -z "$TORRENT_DIR" ]; then
-	exit 1
+    exit 1
 fi
+
 
 ###########################################################
 # Determinar directorio real de la descarga
@@ -24,8 +25,9 @@ fi
 DOWNLOAD_PATH="$TORRENT_DIR"
 
 if [ -n "$TORRENT_NAME" ] && [ -d "$TORRENT_DIR/$TORRENT_NAME" ]; then
-	DOWNLOAD_PATH="$TORRENT_DIR/$TORRENT_NAME"
+    DOWNLOAD_PATH="$TORRENT_DIR/$TORRENT_NAME"
 fi
+
 
 ###########################################################
 # Buscar archivos RAR
@@ -38,8 +40,9 @@ RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.part01.rar" | head -1)
 
 # RAR único o nomenclatura alternativa
 if [ -z "$RAR_FILE" ]; then
-	RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.rar" | head -1)
+    RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.rar" | head -1)
 fi
+
 
 ###########################################################
 # Extraer RAR
@@ -47,37 +50,38 @@ fi
 
 if [ -n "$RAR_FILE" ]; then
 
-	echo "📦 RAR detectado:"
-	echo "$RAR_FILE"
+    echo "📦 RAR detectado:"
+    echo "$RAR_FILE"
 
-	echo "📂 Extrayendo..."
+    echo "📂 Extrayendo..."
 
-	if /usr/bin/7z x "$RAR_FILE" -o"$DOWNLOAD_PATH" -aoa; then
+    if /usr/bin/7z x "$RAR_FILE" -o"$DOWNLOAD_PATH" -aoa; then
 
-		echo "✅ Extracción completada"
+        echo "✅ Extracción completada"
 
-	else
+    else
 
-		echo "❌ Error durante la extracción"
+        echo "❌ Error durante la extracción"
 
-		# Mantener el torrent si la extracción falla
-		exit 20
+        # Mantener el torrent si la extracción falla
+        exit 20
 
-	fi
+    fi
 
 else
 
-	echo "ℹ️ No se encontraron archivos RAR"
+    echo "ℹ️ No se encontraron archivos RAR"
 
 fi
+
 
 ###########################################################
 # Eliminar torrent de Transmission
 ###########################################################
 
 /usr/bin/transmission-remote \
-	--auth "${USER}:${PASS}" \
-	--torrent "$TORRENT_ID" \
-	--remove
+    --auth "${USER}:${PASS}" \
+    --torrent "$TORRENT_ID" \
+    --remove
 
 exit 0

@@ -19,373 +19,399 @@ CASAOS_WAS_ACTIVE=0
 SERVICES_STOPPED=0
 VMS_STOPPED=0
 
-mostrar_error() {
-	echo "❌ $1"
-	exit 20
+mostrar_error()
+{
+    echo "❌ $1"
+    exit 20
 }
 
-restic_cmd() {
-	restic \
-		--repo "$REPOSITORY" \
-		--password-file "$PASSWORD_FILE" \
-		--cache-dir "$CACHE_DIR" \
-		"$@"
+restic_cmd()
+{
+    restic \
+        --repo "$REPOSITORY" \
+        --password-file "$PASSWORD_FILE" \
+        --cache-dir "$CACHE_DIR" \
+        "$@"
 }
 
-restaurar_servicios() {
-	[ "$SERVICES_STOPPED" -eq 1 ] || return 0
+restaurar_servicios()
+{
+    [ "$SERVICES_STOPPED" -eq 1 ] || return 0
 
-	if [ "$CASAOS_WAS_ACTIVE" -eq 1 ]; then
-		systemctl start casaos 2>/dev/null || true
-	fi
+    if [ "$CASAOS_WAS_ACTIVE" -eq 1 ]; then
+        systemctl start casaos 2>/dev/null || true
+    fi
 
-	if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
-		docker start "${RUNNING_CONTAINERS[@]}" >/dev/null 2>&1 || true
-	fi
+    if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
+        docker start "${RUNNING_CONTAINERS[@]}" >/dev/null 2>&1 || true
+    fi
 
-	SERVICES_STOPPED=0
+    SERVICES_STOPPED=0
 }
 
-restaurar_maquinas_virtuales() {
-	[ "$VMS_STOPPED" -eq 1 ] || return 0
+restaurar_maquinas_virtuales()
+{
+    [ "$VMS_STOPPED" -eq 1 ] || return 0
 
-	for VM in "${RUNNING_VMS[@]}"; do
-		echo "▶️ Iniciando máquina virtual: $VM"
+    for VM in "${RUNNING_VMS[@]}"
+    do
+        echo "▶️ Iniciando máquina virtual: $VM"
 
-		virsh -c qemu:///system start "$VM" >/dev/null 2>&1 ||
-			echo "⚠️ No se pudo iniciar la máquina virtual: $VM"
-	done
+        virsh -c qemu:///system start "$VM" >/dev/null 2>&1 || \
+            echo "⚠️ No se pudo iniciar la máquina virtual: $VM"
+    done
 
-	VMS_STOPPED=0
+    VMS_STOPPED=0
 }
 
-limpiar_archivos_vm() {
-	for ARCHIVE in "${VM_ARCHIVES[@]}"; do
-		rm -f -- "$ARCHIVE"
-	done
+limpiar_archivos_vm()
+{
+    for ARCHIVE in "${VM_ARCHIVES[@]}"
+    do
+        rm -f -- "$ARCHIVE"
+    done
 
-	rmdir "$VM_BACKUP_DIR" 2>/dev/null || true
-	VM_ARCHIVES=()
+    rmdir "$VM_BACKUP_DIR" 2>/dev/null || true
+    VM_ARCHIVES=()
 }
 
-limpiar() {
-	restaurar_servicios
-	restaurar_maquinas_virtuales
-	limpiar_archivos_vm
+limpiar()
+{
+    restaurar_servicios
+    restaurar_maquinas_virtuales
+    limpiar_archivos_vm
 }
 
-interrumpir() {
-	echo "⚠️ Copia interrumpida; restaurando CasaOS, aplicaciones y máquinas virtuales"
-	limpiar
-	exit 143
+interrumpir()
+{
+    echo "⚠️ Copia interrumpida; restaurando CasaOS, aplicaciones y máquinas virtuales"
+    limpiar
+    exit 143
 }
 
-detectar_discos_vm() {
-	local VM
-	local DISK
-	local -a ALL_VMS=()
-	local -a DISKS_VM=()
-	local -A DISKS_VISTOS=()
+detectar_discos_vm()
+{
+    local VM
+    local DISK
+    local -a ALL_VMS=()
+    local -a DISKS_VM=()
+    local -A DISKS_VISTOS=()
 
-	VM_DISKS=()
+    VM_DISKS=()
 
-	command -v virsh >/dev/null 2>&1 ||
-		mostrar_error "Virsh no está disponible"
+    command -v virsh >/dev/null 2>&1 ||
+        mostrar_error "Virsh no está disponible"
 
-	mapfile -t ALL_VMS < <(
-		virsh -c qemu:///system list --all --name |
-			awk 'NF { print }'
-	)
+    mapfile -t ALL_VMS < <(
+        virsh -c qemu:///system list --all --name |
+            awk 'NF { print }'
+    )
 
-	for VM in "${ALL_VMS[@]}"; do
-		mapfile -t DISKS_VM < <(
-			virsh -c qemu:///system domblklist \
-				"$VM" \
-				--details |
-				awk '$1 == "file" && $2 == "disk" && $4 != "-" { print $4 }'
-		)
+    for VM in "${ALL_VMS[@]}"
+    do
+        mapfile -t DISKS_VM < <(
+            virsh -c qemu:///system domblklist \
+                "$VM" \
+                --details |
+                awk '$1 == "file" && $2 == "disk" && $4 != "-" { print $4 }'
+        )
 
-		for DISK in "${DISKS_VM[@]}"; do
-			[ -f "$DISK" ] ||
-				mostrar_error "No existe el disco de la máquina virtual $VM: $DISK"
+        for DISK in "${DISKS_VM[@]}"
+        do
+            [ -f "$DISK" ] ||
+                mostrar_error "No existe el disco de la máquina virtual $VM: $DISK"
 
-			if [ -z "${DISKS_VISTOS[$DISK]:-}" ]; then
-				VM_DISKS+=("$DISK")
-				DISKS_VISTOS["$DISK"]=1
-			fi
-		done
-	done
+            if [ -z "${DISKS_VISTOS[$DISK]:-}" ]; then
+                VM_DISKS+=("$DISK")
+                DISKS_VISTOS["$DISK"]=1
+            fi
+        done
+    done
 }
 
-parar_maquinas_virtuales() {
-	local VM
-	local ESTADO
-	local INICIO_ESPERA
+parar_maquinas_virtuales()
+{
+    local VM
+    local ESTADO
+    local INICIO_ESPERA
 
-	mapfile -t RUNNING_VMS < <(
-		virsh -c qemu:///system list --name |
-			awk 'NF { print }'
-	)
+    mapfile -t RUNNING_VMS < <(
+        virsh -c qemu:///system list --name |
+            awk 'NF { print }'
+    )
 
-	[ "${#RUNNING_VMS[@]}" -gt 0 ] || return 0
+    [ "${#RUNNING_VMS[@]}" -gt 0 ] || return 0
 
-	VMS_STOPPED=1
+    VMS_STOPPED=1
 
-	for VM in "${RUNNING_VMS[@]}"; do
-		echo "⏸️ Apagando máquina virtual: $VM"
+    for VM in "${RUNNING_VMS[@]}"
+    do
+        echo "⏸️ Apagando máquina virtual: $VM"
 
-		virsh -c qemu:///system shutdown "$VM" ||
-			mostrar_error "No se pudo solicitar el apagado de la máquina virtual: $VM"
-	done
+        virsh -c qemu:///system shutdown "$VM" ||
+            mostrar_error "No se pudo solicitar el apagado de la máquina virtual: $VM"
+    done
 
-	for VM in "${RUNNING_VMS[@]}"; do
-		INICIO_ESPERA="$SECONDS"
+    for VM in "${RUNNING_VMS[@]}"
+    do
+        INICIO_ESPERA="$SECONDS"
 
-		while true; do
-			ESTADO=$(
-				virsh -c qemu:///system domstate "$VM" 2>/dev/null ||
-					true
-			)
+        while true
+        do
+            ESTADO=$(
+                virsh -c qemu:///system domstate "$VM" 2>/dev/null ||
+                    true
+            )
 
-			[ "$ESTADO" = "shut off" ] && break
+            [ "$ESTADO" = "shut off" ] && break
 
-			if [ $((SECONDS - INICIO_ESPERA)) -ge "$VM_SHUTDOWN_TIMEOUT" ]; then
-				mostrar_error "La máquina virtual no se apagó a tiempo: $VM"
-			fi
+            if [ $((SECONDS - INICIO_ESPERA)) -ge "$VM_SHUTDOWN_TIMEOUT" ]; then
+                mostrar_error "La máquina virtual no se apagó a tiempo: $VM"
+            fi
 
-			sleep 2
-		done
-	done
+            sleep 2
+        done
+    done
 }
 
-parar_servicios() {
-	command -v docker >/dev/null 2>&1 ||
-		mostrar_error "Docker no está disponible"
+parar_servicios()
+{
+    command -v docker >/dev/null 2>&1 ||
+        mostrar_error "Docker no está disponible"
 
-	mapfile -t RUNNING_CONTAINERS < <(
-		docker ps --format '{{.Names}}'
-	)
+    mapfile -t RUNNING_CONTAINERS < <(
+        docker ps --format '{{.Names}}'
+    )
 
-	SERVICES_STOPPED=1
+    SERVICES_STOPPED=1
 
-	if systemctl is-active --quiet casaos; then
-		CASAOS_WAS_ACTIVE=1
-		systemctl stop casaos
-	fi
+    if systemctl is-active --quiet casaos; then
+        CASAOS_WAS_ACTIVE=1
+        systemctl stop casaos
+    fi
 
-	if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
-		docker stop "${RUNNING_CONTAINERS[@]}"
-	fi
+    if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
+        docker stop "${RUNNING_CONTAINERS[@]}"
+    fi
 }
 
-crear_archivos_vm() {
-	local DISK
-	local ARCHIVE
-	local ARCHIVE_NAME
+crear_archivos_vm()
+{
+    local DISK
+    local ARCHIVE
+    local ARCHIVE_NAME
 
-	[ "${#VM_DISKS[@]}" -gt 0 ] || return 0
+    [ "${#VM_DISKS[@]}" -gt 0 ] || return 0
 
-	install -d -o root -g root -m 0700 "$VM_BACKUP_DIR"
+    install -d -o root -g root -m 0700 "$VM_BACKUP_DIR"
 
-	for DISK in "${VM_DISKS[@]}"; do
-		ARCHIVE_NAME="$(
-			printf '%s' "$DISK" |
-				sha256sum |
-				awk '{print substr($1, 1, 16)}'
-		).tar"
+    for DISK in "${VM_DISKS[@]}"
+    do
+        ARCHIVE_NAME="$(
+            printf '%s' "$DISK" |
+                sha256sum |
+                awk '{print substr($1, 1, 16)}'
+        ).tar"
 
-		ARCHIVE="$VM_BACKUP_DIR/$ARCHIVE_NAME"
-		VM_ARCHIVES+=("$ARCHIVE")
+        ARCHIVE="$VM_BACKUP_DIR/$ARCHIVE_NAME"
+        VM_ARCHIVES+=("$ARCHIVE")
 
-		echo "📦 Preparando disco virtual: $DISK"
+        echo "📦 Preparando disco virtual: $DISK"
 
-		tar \
-			--sparse \
-			--create \
-			--file="$ARCHIVE" \
-			-C "$(dirname "$DISK")" \
-			"$(basename "$DISK")"
-	done
+        tar \
+            --sparse \
+            --create \
+            --file="$ARCHIVE" \
+            -C "$(dirname "$DISK")" \
+            "$(basename "$DISK")"
+    done
 }
 
-crear_metadatos() {
-	local VM
-	local INDEX
-	local -a ALL_VMS=()
+crear_metadatos()
+{
+    local VM
+    local INDEX
+    local -a ALL_VMS=()
 
-	install -d -o root -g root -m 0700 \
-		"$CACHE_DIR" \
-		"$METADATA_DIR"
+    install -d -o root -g root -m 0700 \
+        "$CACHE_DIR" \
+        "$METADATA_DIR"
 
-	date --iso-8601=seconds >"$METADATA_DIR/created-at.txt"
-	hostnamectl >"$METADATA_DIR/hostnamectl.txt"
-	lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS >"$METADATA_DIR/lsblk.txt"
-	findmnt >"$METADATA_DIR/findmnt.txt"
+    date --iso-8601=seconds > "$METADATA_DIR/created-at.txt"
+    hostnamectl > "$METADATA_DIR/hostnamectl.txt"
+    lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS > "$METADATA_DIR/lsblk.txt"
+    findmnt > "$METADATA_DIR/findmnt.txt"
 
-	dpkg-query -W -f='${binary:Package}\t${Version}\n' |
-		sort >"$METADATA_DIR/packages.tsv"
+    dpkg-query -W -f='${binary:Package}\t${Version}\n' |
+        sort > "$METADATA_DIR/packages.tsv"
 
-	apt-mark showmanual |
-		sort >"$METADATA_DIR/manual-packages.txt"
+    apt-mark showmanual |
+        sort > "$METADATA_DIR/manual-packages.txt"
 
-	systemctl list-unit-files |
-		sort >"$METADATA_DIR/systemd-unit-files.txt"
+    systemctl list-unit-files |
+        sort > "$METADATA_DIR/systemd-unit-files.txt"
 
-	docker ps -a >"$METADATA_DIR/docker-containers.txt"
-	docker image ls --digests >"$METADATA_DIR/docker-images.txt"
-	docker network ls >"$METADATA_DIR/docker-networks.txt"
-	docker volume ls >"$METADATA_DIR/docker-volumes.txt"
+    docker ps -a > "$METADATA_DIR/docker-containers.txt"
+    docker image ls --digests > "$METADATA_DIR/docker-images.txt"
+    docker network ls > "$METADATA_DIR/docker-networks.txt"
+    docker volume ls > "$METADATA_DIR/docker-volumes.txt"
 
-	docker ps -aq |
-		xargs -r docker inspect \
-			>"$METADATA_DIR/docker-inspect.json" \
-			2>/dev/null || true
+    docker ps -aq |
+        xargs -r docker inspect \
+        > "$METADATA_DIR/docker-inspect.json" \
+        2>/dev/null || true
 
-	printf '%s\n' "${RUNNING_CONTAINERS[@]}" \
-		>"$METADATA_DIR/docker-running-containers.txt"
+    printf '%s\n' "${RUNNING_CONTAINERS[@]}" \
+        > "$METADATA_DIR/docker-running-containers.txt"
 
-	virsh -c qemu:///system list --all \
-		>"$METADATA_DIR/libvirt-domains.txt"
+    virsh -c qemu:///system list --all \
+        > "$METADATA_DIR/libvirt-domains.txt"
 
-	printf '%s\n' "${RUNNING_VMS[@]}" \
-		>"$METADATA_DIR/libvirt-running-domains.txt"
+    printf '%s\n' "${RUNNING_VMS[@]}" \
+        > "$METADATA_DIR/libvirt-running-domains.txt"
 
-	: >"$METADATA_DIR/libvirt-disk-archives.tsv"
+    : > "$METADATA_DIR/libvirt-disk-archives.tsv"
 
-	for INDEX in "${!VM_DISKS[@]}"; do
-		printf '%s\t%s\n' \
-			"${VM_DISKS[$INDEX]}" \
-			"$(basename "${VM_ARCHIVES[$INDEX]}")" \
-			>>"$METADATA_DIR/libvirt-disk-archives.tsv"
-	done
+    for INDEX in "${!VM_DISKS[@]}"
+    do
+        printf '%s\t%s\n' \
+            "${VM_DISKS[$INDEX]}" \
+            "$(basename "${VM_ARCHIVES[$INDEX]}")" \
+            >> "$METADATA_DIR/libvirt-disk-archives.tsv"
+    done
 
-	mapfile -t ALL_VMS < <(
-		virsh -c qemu:///system list --all --name |
-			awk 'NF { print }'
-	)
+    mapfile -t ALL_VMS < <(
+        virsh -c qemu:///system list --all --name |
+            awk 'NF { print }'
+    )
 
-	for VM in "${ALL_VMS[@]}"; do
-		virsh -c qemu:///system dumpxml "$VM" \
-			>"$METADATA_DIR/libvirt-$VM.xml"
-	done
+    for VM in "${ALL_VMS[@]}"
+    do
+        virsh -c qemu:///system dumpxml "$VM" \
+            > "$METADATA_DIR/libvirt-$VM.xml"
+    done
 }
 
-crear_backup() {
-	local -a SOURCES=()
-	local -a EXCLUDES=()
+crear_backup()
+{
+    local -a SOURCES=()
+    local -a EXCLUDES=()
 
-	[ -f "$PASSWORD_FILE" ] ||
-		mostrar_error "No existe el archivo de contraseña de Restic"
+    [ -f "$PASSWORD_FILE" ] ||
+        mostrar_error "No existe el archivo de contraseña de Restic"
 
-	mountpoint -q /mnt/datos ||
-		mostrar_error "/mnt/datos no está montado"
+    mountpoint -q /mnt/datos ||
+        mostrar_error "/mnt/datos no está montado"
 
-	command -v restic >/dev/null 2>&1 ||
-		mostrar_error "Restic no está instalado"
+    command -v restic >/dev/null 2>&1 ||
+        mostrar_error "Restic no está instalado"
 
-	command -v tar >/dev/null 2>&1 ||
-		mostrar_error "Tar no está disponible"
+    command -v tar >/dev/null 2>&1 ||
+        mostrar_error "Tar no está disponible"
 
-	trap limpiar EXIT
-	trap interrumpir INT TERM
+    trap limpiar EXIT
+    trap interrumpir INT TERM
 
-	echo "💾 Preparando copia de recuperación del servidor"
-	echo "⏸️ Apagando temporalmente las máquinas virtuales"
+    echo "💾 Preparando copia de recuperación del servidor"
+    echo "⏸️ Apagando temporalmente las máquinas virtuales"
 
-	detectar_discos_vm
-	parar_maquinas_virtuales
+    detectar_discos_vm
+    parar_maquinas_virtuales
 
-	echo "⏸️ Deteniendo temporalmente CasaOS y las aplicaciones"
-	parar_servicios
+    echo "⏸️ Deteniendo temporalmente CasaOS y las aplicaciones"
+    parar_servicios
 
-	crear_archivos_vm
-	crear_metadatos
+    crear_archivos_vm
+    crear_metadatos
 
-	SOURCES=(
-		/etc
-		/home/server
-		/root
-		/DATA
-		/opt/fumetaos
-		/usr/local
-		/var/lib/casaos
-		"$METADATA_DIR"
-		"${VM_ARCHIVES[@]}"
-	)
+    SOURCES=(
+        /etc
+        /home/server
+        /root
+        /DATA
+        /opt/fumetaos
+        /usr/local
+        /var/lib/casaos
+        "$METADATA_DIR"
+        "${VM_ARCHIVES[@]}"
+    )
 
-	EXCLUDES=(
-		--exclude "$TIMECAPSULE_MOUNT"
-	)
+    EXCLUDES=(
+        --exclude "$TIMECAPSULE_MOUNT"
+    )
 
-	if [ -d /var/spool/cron ]; then
-		SOURCES+=(/var/spool/cron)
-	fi
+    if [ -d /var/spool/cron ]; then
+        SOURCES+=(/var/spool/cron)
+    fi
 
-	echo "📦 Guardando configuración, credenciales, datos de aplicaciones y máquinas virtuales"
-	echo "ℹ️ Excluyendo almacenamiento remoto: $TIMECAPSULE_MOUNT"
+    echo "📦 Guardando configuración, credenciales, datos de aplicaciones y máquinas virtuales"
+    echo "ℹ️ Excluyendo almacenamiento remoto: $TIMECAPSULE_MOUNT"
 
-	restic_cmd backup \
-		--tag fumetaos-recovery \
-		--host server \
-		--one-file-system \
-		"${EXCLUDES[@]}" \
-		"${SOURCES[@]}"
+    restic_cmd backup \
+        --tag fumetaos-recovery \
+        --host server \
+        --one-file-system \
+        "${EXCLUDES[@]}" \
+        "${SOURCES[@]}"
 
-	echo "🧹 Aplicando retención"
+    echo "🧹 Aplicando retención"
 
-	restic_cmd forget \
-		--prune \
-		--tag fumetaos-recovery \
-		--keep-daily 14 \
-		--keep-weekly 8 \
-		--keep-monthly 12
+    restic_cmd forget \
+        --prune \
+        --tag fumetaos-recovery \
+        --keep-daily 14 \
+        --keep-weekly 8 \
+        --keep-monthly 12
 
-	limpiar
-	trap - EXIT INT TERM
+    limpiar
+    trap - EXIT INT TERM
 
-	echo "✅ Copia de recuperación completada"
+    echo "✅ Copia de recuperación completada"
 }
 
-listar_backups() {
-	restic_cmd snapshots --tag fumetaos-recovery
+listar_backups()
+{
+    restic_cmd snapshots --tag fumetaos-recovery
 }
 
-verificar_backups() {
-	restic_cmd snapshots --tag fumetaos-recovery
-	restic_cmd check --read-data
+verificar_backups()
+{
+    restic_cmd snapshots --tag fumetaos-recovery
+    restic_cmd check --read-data
 }
 
-estadisticas() {
-	restic_cmd stats --tag fumetaos-recovery
+estadisticas()
+{
+    restic_cmd stats --tag fumetaos-recovery
 }
 
 [ "$(id -u)" -eq 0 ] ||
-	mostrar_error "Este backup debe ejecutarse como root"
+    mostrar_error "Este backup debe ejecutarse como root"
 
 exec 9>"$LOCK_FILE"
 
 flock -n 9 ||
-	mostrar_error "Ya hay una copia de recuperación en curso"
+    mostrar_error "Ya hay una copia de recuperación en curso"
 
 case "${1:-create}" in
-create)
-	crear_backup
-	;;
-list)
-	listar_backups
-	;;
-verify)
-	verificar_backups
-	;;
-stats)
-	estadisticas
-	;;
-*)
-	echo "Uso:"
-	echo "fumetaos-recovery-backup create"
-	echo "fumetaos-recovery-backup list"
-	echo "fumetaos-recovery-backup verify"
-	echo "fumetaos-recovery-backup stats"
-	exit 20
-	;;
+    create)
+        crear_backup
+        ;;
+    list)
+        listar_backups
+        ;;
+    verify)
+        verificar_backups
+        ;;
+    stats)
+        estadisticas
+        ;;
+    *)
+        echo "Uso:"
+        echo "fumetaos-recovery-backup create"
+        echo "fumetaos-recovery-backup list"
+        echo "fumetaos-recovery-backup verify"
+        echo "fumetaos-recovery-backup stats"
+        exit 20
+        ;;
 esac

@@ -13,43 +13,44 @@ WATCH=0
 
 ERROR=0
 
-for DISK in "$HDD_DEVICE" "$SSD_DEVICE"; do
+for DISK in "$HDD_DEVICE" "$SSD_DEVICE"
+do
 
-	NAME=$(disk_name "$DISK")
+    NAME=$(disk_name "$DISK")
 
-	SALIDA=$(smartctl_cmd -H "$DISK" 2>/dev/null)
-	RET=$?
+    SALIDA=$(smartctl_cmd -H "$DISK" 2>/dev/null)
+    RET=$?
 
-	if [ "$RET" -ne 0 ]; then
+    if [ "$RET" -ne 0 ]; then
 
-		if [ "$WATCH" -eq 0 ]; then
-			echo "⚠️ $NAME (no se ha podido comprobar)"
-		else
-			echo "No se ha podido comprobar SMART de $NAME"
-		fi
+        if [ "$WATCH" -eq 0 ]; then
+            echo "⚠️ $NAME (no se ha podido comprobar)"
+        else
+            echo "No se ha podido comprobar SMART de $NAME"
+        fi
 
-		[ "$ERROR" -lt 10 ] && ERROR=10
-		continue
+        [ "$ERROR" -lt 10 ] && ERROR=10
+        continue
 
-	fi
+    fi
 
-	if echo "$SALIDA" | grep -q "PASSED"; then
+    if echo "$SALIDA" | grep -q "PASSED"; then
 
-		if [ "$WATCH" -eq 0 ]; then
-			echo "✅ $NAME"
-		fi
+        if [ "$WATCH" -eq 0 ]; then
+            echo "✅ $NAME"
+        fi
 
-	else
+    else
 
-		if [ "$WATCH" -eq 0 ]; then
-			echo "🚨 $NAME"
-		else
-			echo "Problema SMART en $NAME"
-		fi
+        if [ "$WATCH" -eq 0 ]; then
+            echo "🚨 $NAME"
+        else
+            echo "Problema SMART en $NAME"
+        fi
 
-		ERROR=20
+        ERROR=20
 
-	fi
+    fi
 
 done
 

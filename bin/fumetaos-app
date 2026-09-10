@@ -10,272 +10,319 @@ source "$CORE_DIR/apps.sh"
 source "$CORE_DIR/casaos.sh"
 source "$CORE_DIR/generator.sh"
 
-ayuda_app() {
 
-	echo
-	echo "Uso:"
-	echo
+ayuda_app()
+{
 
-	echo "fumetaos app list"
-	echo "   Listar aplicaciones"
+echo
+echo "Uso:"
+echo
 
-	echo
+echo "fumetaos app list"
+echo "   Listar aplicaciones"
 
-	echo "fumetaos app info <app>"
-	echo "   Información completa"
+echo
 
-	echo
+echo "fumetaos app info <app>"
+echo "   Información completa"
 
-	echo "fumetaos app generate <app>"
-	echo "   Generar recursos de aplicación"
+echo
 
-	echo
+echo "fumetaos app generate <app>"
+echo "   Generar recursos de aplicación"
 
-	echo "fumetaos app metadata <app>"
-	echo "   Generar metadata CasaOS"
+echo
 
-	echo
+echo "fumetaos app metadata <app>"
+echo "   Generar metadata CasaOS"
 
-	echo "fumetaos app install <app>"
-	echo "   Instalar aplicación"
+echo
 
-	echo
+echo "fumetaos app install <app>"
+echo "   Instalar aplicación"
 
-	echo "fumetaos app update <app>"
-	echo "   Actualizar aplicación"
+echo
 
-	echo
+echo "fumetaos app update <app>"
+echo "   Actualizar aplicación"
 
-	echo "fumetaos app restart <app>"
-	echo "   Reiniciar aplicación"
+echo
 
-	echo
+echo "fumetaos app restart <app>"
+echo "   Reiniciar aplicación"
 
-	echo "fumetaos app logs <app>"
-	echo "   Ver logs"
+echo
 
-	echo
+echo "fumetaos app logs <app>"
+echo "   Ver logs"
 
-	echo "fumetaos app remove <app>"
-	echo "   Eliminar aplicación"
+echo
 
-	echo
+echo "fumetaos app remove <app>"
+echo "   Eliminar aplicación"
 
-}
-
-resolver_app() {
-
-	APP_PATH=$(app_find "$1")
-
-	if [ -z "$APP_PATH" ]; then
-
-		echo "❌ Aplicación no encontrada: $1" >&2
-		return 1
-
-	fi
-
-	echo "$APP_PATH"
+echo
 
 }
 
-listar_apps() {
 
-	echo
-	echo "📦 Aplicaciones"
-	echo
+resolver_app()
+{
 
-	TOTAL=0
+APP_PATH=$(app_find "$1")
 
-	for APP in $(app_list); do
 
-		app_load "$APP"
+if [ -z "$APP_PATH" ]; then
 
-		TOTAL=$((TOTAL + 1))
+    echo "❌ Aplicación no encontrada: $1" >&2
+    return 1
 
-		echo "🟢 $APP_NAME"
+fi
 
-		[ -n "$APP_DESCRIPTION" ] && echo "   $APP_DESCRIPTION"
 
-		[ -n "$APP_CATEGORY" ] && echo "   Categoría: $APP_CATEGORY"
-
-		echo "   Versión: $APP_VERSION"
-
-		if app_running; then
-			echo "   Estado: 🟢 Ejecutando"
-		else
-			echo "   Estado: 🔴 Detenido"
-		fi
-
-		echo
-
-	done
-
-	echo "Total: $TOTAL"
-
-	echo
+echo "$APP_PATH"
 
 }
 
-info_app() {
 
-	APP_PATH=$(resolver_app "$1") || return 1
+listar_apps()
+{
 
-	app_load "$APP_PATH"
+echo
+echo "📦 Aplicaciones"
+echo
 
-	echo
-	echo "📦 $APP_NAME"
-	echo
 
-	echo "Descripción: $APP_DESCRIPTION"
-	echo "Categoría: $APP_CATEGORY"
-	echo "Autor: $APP_AUTHOR"
+TOTAL=0
 
-	echo
 
-	echo "Imagen: $APP_IMAGE:$APP_TAG"
-	echo "Contenedor: $(app_container)"
+for APP in $(app_list)
+do
 
-	echo
+    app_load "$APP"
 
-	echo "Puerto: $APP_PORT"
-	echo "URL: $APP_URL"
+    TOTAL=$((TOTAL+1))
 
-	echo
 
-	echo "Compose: $APP_COMPOSE"
-	echo "Datos: $APP_DATA"
+    echo "🟢 $APP_NAME"
 
-	echo
+    [ -n "$APP_DESCRIPTION" ] && echo "   $APP_DESCRIPTION"
 
-	if app_running; then
-		echo "Estado: 🟢 Ejecutando"
-	else
-		echo "Estado: 🔴 Detenido"
-	fi
+    [ -n "$APP_CATEGORY" ] && echo "   Categoría: $APP_CATEGORY"
 
-	echo
+    echo "   Versión: $APP_VERSION"
 
-}
+    if app_running; then
+        echo "   Estado: 🟢 Ejecutando"
+    else
+        echo "   Estado: 🔴 Detenido"
+    fi
 
-generar_app() {
+    echo
 
-	APP_PATH=$(resolver_app "$1") || return 1
+done
 
-	echo
-	echo "📦 Generando aplicación"
-	echo
 
-	generate_app_structure "$APP_PATH"
+echo "Total: $TOTAL"
 
-	generate_compose "$APP_PATH"
-
-	casaos_generate "$APP_PATH"
-
-	echo
-	echo "✅ Generación completada"
-
-	echo
+echo
 
 }
 
-metadata_app() {
 
-	APP_PATH=$(resolver_app "$1") || return 1
+info_app()
+{
 
-	casaos_generate "$APP_PATH"
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_load "$APP_PATH"
+
+
+echo
+echo "📦 $APP_NAME"
+echo
+
+echo "Descripción: $APP_DESCRIPTION"
+echo "Categoría: $APP_CATEGORY"
+echo "Autor: $APP_AUTHOR"
+
+echo
+
+echo "Imagen: $APP_IMAGE:$APP_TAG"
+echo "Contenedor: $(app_container)"
+
+echo
+
+echo "Puerto: $APP_PORT"
+echo "URL: $APP_URL"
+
+echo
+
+echo "Compose: $APP_COMPOSE"
+echo "Datos: $APP_DATA"
+
+echo
+
+
+if app_running; then
+    echo "Estado: 🟢 Ejecutando"
+else
+    echo "Estado: 🔴 Detenido"
+fi
+
+
+echo
+
+}
+
+
+generar_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+
+echo
+echo "📦 Generando aplicación"
+echo
+
+
+generate_app_structure "$APP_PATH"
+
+generate_compose "$APP_PATH"
+
+casaos_generate "$APP_PATH"
+
+
+echo
+echo "✅ Generación completada"
+
+echo
 
 }
 
-instalar_app() {
 
-	APP_PATH=$(resolver_app "$1") || return 1
+metadata_app()
+{
 
-	app_install "$APP_PATH"
+APP_PATH=$(resolver_app "$1") || return 1
 
-}
-
-actualizar_app() {
-
-	APP_PATH=$(resolver_app "$1") || return 1
-
-	app_update "$APP_PATH"
+casaos_generate "$APP_PATH"
 
 }
 
-reiniciar_app() {
 
-	APP_PATH=$(resolver_app "$1") || return 1
+instalar_app()
+{
 
-	app_restart "$APP_PATH"
+APP_PATH=$(resolver_app "$1") || return 1
 
-}
-
-logs_app() {
-
-	APP_PATH=$(resolver_app "$1") || return 1
-
-	app_logs "$APP_PATH"
+app_install "$APP_PATH"
 
 }
 
-eliminar_app() {
 
-	APP_PATH=$(resolver_app "$1") || return 1
+actualizar_app()
+{
 
-	app_remove "$APP_PATH"
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_update "$APP_PATH"
 
 }
+
+
+reiniciar_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_restart "$APP_PATH"
+
+}
+
+
+logs_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_logs "$APP_PATH"
+
+}
+
+
+eliminar_app()
+{
+
+APP_PATH=$(resolver_app "$1") || return 1
+
+app_remove "$APP_PATH"
+
+}
+
 
 case "$1" in
 
+
 list)
 
-	listar_apps
-	;;
+listar_apps
+;;
+
 
 info)
 
-	info_app "$2"
-	;;
+info_app "$2"
+;;
+
 
 generate)
 
-	generar_app "$2"
-	;;
+generar_app "$2"
+;;
+
 
 metadata)
 
-	metadata_app "$2"
-	;;
+metadata_app "$2"
+;;
+
 
 install)
 
-	instalar_app "$2"
-	;;
+instalar_app "$2"
+;;
+
 
 update)
 
-	actualizar_app "$2"
-	;;
+actualizar_app "$2"
+;;
+
 
 restart)
 
-	reiniciar_app "$2"
-	;;
+reiniciar_app "$2"
+;;
+
 
 logs)
 
-	logs_app "$2"
-	;;
+logs_app "$2"
+;;
+
 
 remove)
 
-	eliminar_app "$2"
-	;;
+eliminar_app "$2"
+;;
 
-help | *)
 
-	ayuda_app
-	;;
+help|*)
+
+ayuda_app
+;;
+
 
 esac

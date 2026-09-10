@@ -13,6 +13,7 @@ IP=$(hostname -I | awk '{print $1}')
 
 KERNEL=$(uname -r)
 
+
 echo "⏱️ Uptime: $UPTIME"
 echo "🌐 IP: $IP"
 echo "🐧 Kernel: $KERNEL"

@@ -7,13 +7,15 @@
 
 ERROR=0
 
+
 echo "🛠️ Servicios"
 /opt/fumetaos/modules/monitor/services.sh
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 echo
 echo "⏱️ Timers FumetaOS"
@@ -21,8 +23,9 @@ echo "⏱️ Timers FumetaOS"
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 echo
 echo "💚 SMART"
@@ -30,8 +33,9 @@ echo "💚 SMART"
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 echo
 echo "💾 Discos"
@@ -39,8 +43,9 @@ echo "💾 Discos"
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 echo
 echo "🌡️ Temperatura"
@@ -48,8 +53,9 @@ echo "🌡️ Temperatura"
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 echo
 echo "🧠 Memoria"
@@ -57,8 +63,9 @@ echo "🧠 Memoria"
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 echo
 echo "📦 Actualizaciones"
@@ -66,7 +73,8 @@ echo "📦 Actualizaciones"
 RET=$?
 
 if [ "$RET" -gt "$ERROR" ]; then
-	ERROR=$RET
+    ERROR=$RET
 fi
+
 
 exit $ERROR
