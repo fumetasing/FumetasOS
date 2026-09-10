@@ -323,10 +323,8 @@ mkdir -p "$APP_DATA"
 cd "$APP_DATA" || return 1
 
 
-docker compose -f "$APP_COMPOSE" up -d
-
-
-if [ $? -eq 0 ]; then
+if docker compose -f "$APP_COMPOSE" up -d
+then
 
     echo
     echo "✅ $APP_NAME instalado"

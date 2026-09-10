@@ -29,13 +29,12 @@ if [ -d "$DIR" ]; then
 fi
 
 
-mkdir -p "$DIR" 2>/dev/null
+if ! mkdir -p "$DIR" 2>/dev/null
+then
 
+    sudo mkdir -p "$DIR" || return 1
+    sudo chown -R "$USER:$USER" "$(dirname "$(dirname "$DIR")")" || return 1
 
-if [ $? -ne 0 ]; then
-
-    sudo mkdir -p "$DIR"
-    sudo chown -R "$USER:$USER" "$(dirname "$(dirname "$DIR")")"
 fi
 
 }
@@ -55,7 +54,7 @@ source "$APP_PATH/app.conf"
 DIR=$(casaos_metadata_dir)
 
 
-casaos_prepare_dir "$DIR"
+casaos_prepare_dir "$DIR" || return 1
 
 
 cat > "$DIR/app.yaml" <<EOF
