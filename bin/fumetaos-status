@@ -16,22 +16,18 @@ source "$CORE_DIR/services.sh"
 VERSION="desconocida"
 
 if [ -f "$VERSION_FILE" ]; then
-	VERSION=$(cat "$VERSION_FILE")
+	VERSION="$(<"$VERSION_FILE")"
 fi
 
 ###########################################################
 # Recursos
 ###########################################################
 
-CPU=$(cpu_temp)
-
-RAM=$(ram_usage)
-
-SYSTEM_DISK=$(df / | awk 'NR==2 {gsub("%","",$5); print $5}')
-
-DATA_DISK=$(disk_usage)
-
-UPDATES=$(updates_available)
+CPU="$(cpu_temp)"
+RAM="$(ram_usage)"
+SYSTEM_DISK="$(df / | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
+DATA_DISK="$(disk_usage)"
+UPDATES="$(updates_available)"
 
 ###########################################################
 # Estado general
@@ -43,17 +39,13 @@ if [ "$CPU" -ge "$CPU_WARNING" ] ||
 	[ "$RAM" -ge "$RAM_WARNING" ] ||
 	[ "$DATA_DISK" -ge "$DISK_WARNING" ] ||
 	[ "$UPDATES" -gt 0 ]; then
-
 	STATUS="🟡 AVISOS"
-
 fi
 
 if [ "$CPU" -ge "$CPU_CRITICAL" ] ||
 	[ "$RAM" -ge "$RAM_CRITICAL" ] ||
 	[ "$DATA_DISK" -ge "$DISK_CRITICAL" ]; then
-
 	STATUS="🔴 REVISAR"
-
 fi
 
 ###########################################################
@@ -63,14 +55,12 @@ fi
 SERVICES_OK=0
 SERVICES_TOTAL=0
 
-for SERVICE in $SYSTEM_SERVICES; do
-
+for service in $SYSTEM_SERVICES; do
 	SERVICES_TOTAL=$((SERVICES_TOTAL + 1))
 
-	if [ "$(service_state "$SERVICE")" = "active" ]; then
+	if unit_is_active "$service"; then
 		SERVICES_OK=$((SERVICES_OK + 1))
 	fi
-
 done
 
 ###########################################################
@@ -80,14 +70,12 @@ done
 TIMERS_OK=0
 TIMERS_TOTAL=0
 
-for TIMER in $FUMETAOS_TIMERS; do
-
+for timer in $FUMETAOS_TIMERS; do
 	TIMERS_TOTAL=$((TIMERS_TOTAL + 1))
 
-	if [ "$(timer_state "$TIMER")" = "active" ]; then
+	if unit_is_active "$timer"; then
 		TIMERS_OK=$((TIMERS_OK + 1))
 	fi
-
 done
 
 ###########################################################
@@ -95,31 +83,17 @@ done
 ###########################################################
 
 echo
-
 echo "🖥️ FumetaOS v$VERSION"
-
 echo
-
 echo "Estado: $STATUS"
-
 echo
-
 echo "🌡️ CPU: ${CPU}°C"
-
 echo "🧠 RAM: ${RAM}%"
-
 echo "💾 SSD Sistema: ${SYSTEM_DISK}%"
-
 echo "💾 HDD Datos: ${DATA_DISK}%"
-
 echo
-
 echo "🛠️ Servicios: ${SERVICES_OK}/${SERVICES_TOTAL}"
-
 echo "⏱️ Timers: ${TIMERS_OK}/${TIMERS_TOTAL}"
-
 echo
-
 echo "📦 Actualizaciones: $UPDATES"
-
 echo

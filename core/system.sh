@@ -19,10 +19,12 @@ DATA_MOUNT="${DATA_MOUNT:-/mnt/datos}"
 
 cpu_temp() {
 	sensors |
-		awk '/Package id 0:/ {
-            gsub("\\+|°C", "", $4)
-            print int($4)
-        }'
+		awk '
+            /Package id 0:/ {
+                gsub("\\+|°C", "", $4)
+                print int($4)
+            }
+        '
 }
 
 ###########################################################
@@ -31,9 +33,11 @@ cpu_temp() {
 
 ram_metrics() {
 	free |
-		awk '/Mem:/ {
-            printf "%.0f %.0f %.0f\n", $3 / $2 * 100, $3 / 1024, $2 / 1024
-        }'
+		awk '
+            /Mem:/ {
+                printf "%.0f %.0f %.0f\n", $3 / $2 * 100, $3 / 1024, $2 / 1024
+            }
+        '
 }
 
 ram_total_label() {
@@ -61,28 +65,25 @@ ram_total_label() {
 
 ram_usage() {
 	free |
-		awk '/Mem:/ {
-            printf "%.0f", $3 / $2 * 100
-        }'
+		awk '
+            /Mem:/ {
+                printf "%.0f", $3 / $2 * 100
+            }
+        '
 }
 
 ram_total() {
 	local total_mb
 
 	total_mb="$(
-		awk '/MemTotal/ {
-            printf "%.0f", $2 / 1024
-        }' /proc/meminfo
+		awk '
+            /MemTotal/ {
+                printf "%.0f", $2 / 1024
+            }
+        ' /proc/meminfo
 	)"
 
 	ram_total_label "$total_mb"
-}
-
-ram_used() {
-	free -m |
-		awk '/Mem:/ {
-            printf "%.0f MB", $3
-        }'
 }
 
 ###########################################################
@@ -91,17 +92,12 @@ ram_used() {
 
 disk_usage() {
 	df "$DATA_MOUNT" |
-		awk 'NR == 2 {
-            gsub("%", "", $5)
-            print $5
-        }'
-}
-
-disk_free() {
-	df -h "$DATA_MOUNT" |
-		awk 'NR == 2 {
-            print $4
-        }'
+		awk '
+            NR == 2 {
+                gsub("%", "", $5)
+                print $5
+            }
+        '
 }
 
 ###########################################################

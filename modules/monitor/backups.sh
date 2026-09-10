@@ -8,36 +8,45 @@ ERROR=0
 NOW=$(date +%s)
 DAILY_LIMIT=$((30 * 3600))
 WEEKLY_LIMIT=$((8 * 24 * 3600))
+
 TC="fumetaos-timecapsule-mac-backup.service"
 GENERAL="fumetaos-mac-backup.service"
 TC_TIMER="fumetaos-timecapsule-mac-backup.timer"
 
 elevar_error() {
-	if [ "$1" -gt "$ERROR" ]; then ERROR="$1"; fi
+	if [ "$1" -gt "$ERROR" ]; then
+		ERROR="$1"
+	fi
 }
 
-propiedad() {
-	timeout 5 systemctl show "$1" -p "$2" --value 2>/dev/null
-}
-
-# Eventos del gestor systemd, no mensajes impresos por los scripts.
-# No se limita al arranque actual. Se consultan los últimos 30 días.
 ultimo_evento() {
-	local unit="$1" output
+	local unit="$1"
+	local output
+
 	shift
 
-	if ! output=$(timeout 5 journalctl --quiet --no-pager \
-		--since="30 days ago" -n 1 -o short-unix \
-		_PID=1 "UNIT=$unit" "$@" 2>/dev/null); then
+	if ! output=$(
+		timeout 5 journalctl \
+			--quiet \
+			--no-pager \
+			--since="30 days ago" \
+			-n 1 \
+			-o short-unix \
+			_PID=1 \
+			"UNIT=$unit" \
+			"$@" 2>/dev/null
+	); then
 		return 1
 	fi
 
-	printf '%s\n' "$output" | awk '
-        $1 ~ /^[0-9]+\.[0-9]+$/ {
-            split($1, parts, ".")
-            printf "%s%06d\n", parts[1], parts[2]
-            exit
-        }'
+	printf '%s\n' "$output" |
+		awk '
+            $1 ~ /^[0-9]+\.[0-9]+$/ {
+                split($1, parts, ".")
+                printf "%s%06d\n", parts[1], parts[2]
+                exit
+            }
+        '
 }
 
 UNITS=(
@@ -47,24 +56,102 @@ UNITS=(
 	fumetaos-recovery-verify.service
 )
 
-declare -a STATE RESULT LOADED OK BAD HISTORY
+TIMERS=(
+	"$TC_TIMER"
+	fumetaos-recovery-backup.timer
+	fumetaos-recovery-verify.timer
+)
+
+declare -a STATE RESULT LOADED OK BAD HISTORY CHAIN
+declare -A TIMER_STATE TIMER_NEXT
 
 leer_servicio() {
-	local idx="$1" unit="${UNITS[$1]}"
+	local idx="$1"
+	local unit="${UNITS[$1]}"
+	local output
+	local key
+	local value
 
-	LOADED[$idx]=$(propiedad "$unit" LoadState)
-	STATE[$idx]=$(propiedad "$unit" ActiveState)
-	RESULT[$idx]=$(propiedad "$unit" Result)
+	LOADED[$idx]=""
+	STATE[$idx]=""
+	RESULT[$idx]=""
+
+	if output=$(
+		timeout 5 systemctl show \
+			"$unit" \
+			-p LoadState \
+			-p ActiveState \
+			-p Result \
+			2>/dev/null
+	); then
+		while IFS='=' read -r key value; do
+			case "$key" in
+			LoadState)
+				LOADED[$idx]="$value"
+				;;
+			ActiveState)
+				STATE[$idx]="$value"
+				;;
+			Result)
+				RESULT[$idx]="$value"
+				;;
+			esac
+		done <<<"$output"
+	fi
+
+	if [ "$idx" -eq 0 ]; then
+		CHAIN[0]=$(
+			timeout 5 systemctl show \
+				"$unit" \
+				-p OnSuccess \
+				--value \
+				2>/dev/null
+		)
+	fi
+
 	HISTORY[$idx]=1
 
-	OK[$idx]=$(ultimo_evento "$unit" \
-		MESSAGE_ID=39f53479d3a045ac8e11786248231fbf) ||
-		HISTORY[$idx]=0
+	OK[$idx]=$(
+		ultimo_evento \
+			"$unit" \
+			MESSAGE_ID=39f53479d3a045ac8e11786248231fbf
+	) || HISTORY[$idx]=0
 
-	BAD[$idx]=$(ultimo_evento "$unit" \
-		MESSAGE_ID=be02cf6855d2428ba40df7e9d022f03d \
-		MESSAGE_ID=d9b373ed55a64feb8242e02dbe79a49c) ||
-		HISTORY[$idx]=0
+	BAD[$idx]=$(
+		ultimo_evento \
+			"$unit" \
+			MESSAGE_ID=be02cf6855d2428ba40df7e9d022f03d \
+			MESSAGE_ID=d9b373ed55a64feb8242e02dbe79a49c
+	) || HISTORY[$idx]=0
+}
+
+leer_timer() {
+	local timer="$1"
+	local output
+	local key
+	local value
+
+	TIMER_STATE["$timer"]=""
+	TIMER_NEXT["$timer"]=""
+
+	if output=$(
+		timeout 5 systemctl show \
+			"$timer" \
+			-p ActiveState \
+			-p NextElapseUSecRealtime \
+			2>/dev/null
+	); then
+		while IFS='=' read -r key value; do
+			case "$key" in
+			ActiveState)
+				TIMER_STATE["$timer"]="$value"
+				;;
+			NextElapseUSecRealtime)
+				TIMER_NEXT["$timer"]="$value"
+				;;
+			esac
+		done <<<"$output"
+	fi
 }
 
 en_curso() {
@@ -81,7 +168,7 @@ en_curso() {
 ha_fallado() {
 	local idx="$1"
 
-	[ "${STATE[$idx]}" = failed ] && return 0
+	[ "${STATE[$idx]}" = "failed" ] && return 0
 
 	case "${RESULT[$idx]}" in
 	"" | success) ;;
@@ -94,7 +181,9 @@ ha_fallado() {
 }
 
 mostrar_usb() {
-	local output free used
+	local output
+	local free
+	local used
 
 	if ! output=$(
 		timeout 25 ssh \
@@ -135,12 +224,20 @@ REMOTE
 }
 
 mostrar_copia() {
-	local idx="$1" unit="${UNITS[$1]}"
-	local timer="$2" label="$3" limit="$4"
-	local level=0 icon="✅" detail=""
-	local next last age=0 chain
+	local idx="$1"
+	local unit="${UNITS[$1]}"
+	local timer="$2"
+	local label="$3"
+	local limit="$4"
+	local level=0
+	local icon="✅"
+	local detail=""
+	local next
+	local last
+	local age=0
+	local chain
 
-	next=$(propiedad "$timer" NextElapseUSecRealtime)
+	next="${TIMER_NEXT[$timer]}"
 
 	case "$next" in
 	"" | n/a)
@@ -151,14 +248,16 @@ mostrar_copia() {
 	last="No consta en el registro accesible de los últimos 30 días"
 
 	if [ "${OK[$idx]:-0}" -gt 0 ]; then
-		last=$(date \
-			-d "@$((OK[$idx] / 1000000))" \
-			'+%d/%m/%Y %H:%M:%S %Z')
+		last=$(
+			date \
+				-d "@$((OK[$idx] / 1000000))" \
+				'+%d/%m/%Y %H:%M:%S %Z'
+		)
 
 		age=$((NOW - OK[$idx] / 1000000))
 	fi
 
-	if [ "${LOADED[$idx]}" != loaded ]; then
+	if [ "${LOADED[$idx]}" != "loaded" ]; then
 		level=20
 		detail="Servicio no disponible"
 
@@ -190,7 +289,7 @@ mostrar_copia() {
 		fi
 	fi
 
-	if [ "$(propiedad "$timer" ActiveState)" != active ]; then
+	if [ "${TIMER_STATE[$timer]}" != "active" ]; then
 		level=20
 		detail="${detail:+$detail. }Temporizador inactivo o no disponible"
 
@@ -201,7 +300,7 @@ mostrar_copia() {
 
 	if [ "$unit" = "$GENERAL" ]; then
 		next="Al terminar Time Capsule → Mac (programada: $next)"
-		chain=$(propiedad "$TC" OnSuccess)
+		chain="${CHAIN[0]:-}"
 
 		case " $chain " in
 		*" $GENERAL "*) ;;
@@ -216,7 +315,7 @@ mostrar_copia() {
 				[ "$level" -lt 10 ] && level=10
 				detail="${detail:+$detail. }Esperando a que termine Time Capsule"
 
-			elif [ "${LOADED[0]}" != loaded ] || ha_fallado 0; then
+			elif [ "${LOADED[0]}" != "loaded" ] || ha_fallado 0; then
 				level=20
 				detail="${detail:+$detail. }Cadena bloqueada por Time Capsule"
 			fi
@@ -242,6 +341,10 @@ mostrar_copia() {
 
 for idx in "${!UNITS[@]}"; do
 	leer_servicio "$idx"
+done
+
+for timer in "${TIMERS[@]}"; do
+	leer_timer "$timer"
 done
 
 echo

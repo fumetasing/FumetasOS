@@ -12,10 +12,10 @@ source /opt/fumetaos/core/services.sh
 
 INNER=40
 
-VERSION="desconocida"
-
 if [ -f "$VERSION_FILE" ]; then
 	VERSION="$(<"$VERSION_FILE")"
+else
+	VERSION="desconocida"
 fi
 
 ###########################################################
@@ -53,12 +53,11 @@ box() {
 
 CPU="$(cpu_temp)"
 RAM="$(ram_usage)"
-
 SYSTEM_DISK="$(df / | awk 'NR == 2 { gsub("%", "", $5); print $5 }')"
 DATA_DISK="$(disk_usage)"
 UPDATES="$(updates_available)"
 
-if /opt/fumetaos/bin/fumetaos-health >/dev/null 2>&1; then
+if /opt/fumetaos/bin/fumetaos-health --check >/dev/null 2>&1; then
 	STATUS="PERFECTO"
 else
 	STATUS="AVISOS"
@@ -88,16 +87,16 @@ separator
 
 box "APLICACIONES"
 
-while IFS= read -r APP; do
-	app_load "$APP"
+while IFS= read -r app; do
+	app_load "$app"
 
 	if app_running; then
-		ICON="[OK]"
+		icon="[OK]"
 	else
-		ICON="[--]"
+		icon="[--]"
 	fi
 
-	box "$ICON $APP_NAME"
+	box "$icon $APP_NAME"
 	box "     Version: $APP_VERSION"
 	box "     Health: $(app_health)"
 done < <(app_list)
@@ -108,21 +107,21 @@ box "SERVICIOS"
 
 box "TIMERS FUMETAOS"
 
-for TIMER in $FUMETAOS_TIMERS; do
-	if timer_state "$TIMER" | grep -q active; then
-		box "[OK] ${TIMER%.timer}"
+for timer in $FUMETAOS_TIMERS; do
+	if unit_is_active "$timer"; then
+		box "[OK] ${timer%.timer}"
 	else
-		box "[--] ${TIMER%.timer}"
+		box "[--] ${timer%.timer}"
 	fi
 done
 
 box "SISTEMA"
 
-for SERVICE in $SYSTEM_SERVICES; do
-	if service_state "$SERVICE" | grep -q active; then
-		box "[OK] $SERVICE"
+for service in $SYSTEM_SERVICES; do
+	if unit_is_active "$service"; then
+		box "[OK] $service"
 	else
-		box "[--] $SERVICE"
+		box "[--] $service"
 	fi
 done
 

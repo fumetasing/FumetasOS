@@ -10,100 +10,46 @@ SEPARATOR="━━━━━━━━━━━━━━━━"
 echo "🖥️ FumetaOS DAILY REPORT"
 echo "$SEPARATOR"
 
-while IFS= read -r LINE; do
-	case "$LINE" in
+while IFS= read -r line; do
+	case "$line" in
 	"🖥️ FumetaOS v"*)
-		echo "$LINE"
+		echo "$line"
 		echo
 		;;
 
 	"🖥️ Sistema")
-		echo "$LINE"
+		echo "$line"
 		echo
 		;;
 
-	"🛠️ Servicios")
+	"🛠️ Servicios" | \
+		"💾 Time Capsule" | \
+		"🔒 Seguridad" | \
+		"⏱️ Timers FumetaOS" | \
+		"💾 Copias de seguridad" | \
+		"💚 SMART" | \
+		"💾 Discos" | \
+		"🌡️ Temperatura" | \
+		"🧠 Memoria" | \
+		"🖥️ Máquinas virtuales" | \
+		"📦 Aplicaciones" | \
+		"📦 Actualizaciones")
 		echo "$SEPARATOR"
-		echo "$LINE"
+		echo "$line"
 		;;
 
-	"💾 Time Capsule")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"🔒 Seguridad")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"⏱️ Timers FumetaOS")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"💾 Copias de seguridad")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"💚 SMART")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"💾 Discos")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"🌡️ Temperatura")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"🧠 Memoria")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"🖥️ Máquinas virtuales")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"📦 Aplicaciones")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"📦 Actualizaciones")
-		echo "$SEPARATOR"
-		echo "$LINE"
-		;;
-
-	"🟢 Estado general:"*)
+	"🟢 Estado general:"* | \
+		"🟡 Estado general:"* | \
+		"🔴 Estado general:"*)
 		echo "$SEPARATOR"
 		echo
-		echo "$LINE"
-		;;
-
-	"🟡 Estado general:"*)
-		echo "$SEPARATOR"
-		echo
-		echo "$LINE"
-		;;
-
-	"🔴 Estado general:"*)
-		echo "$SEPARATOR"
-		echo
-		echo "$LINE"
+		echo "$line"
 		;;
 
 	"") ;;
 
 	*)
-		echo "$LINE"
+		echo "$line"
 		;;
 	esac
 done

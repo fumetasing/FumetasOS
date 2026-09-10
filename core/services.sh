@@ -7,10 +7,6 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-###########################################################
-# Estado de unidades systemd
-###########################################################
-
 unit_is_active() {
 	systemctl is-active --quiet "$1"
 }
@@ -32,7 +28,11 @@ service_state() {
 ###########################################################
 
 timer_state() {
-	service_state "$1"
+	if unit_is_active "$1"; then
+		echo "active"
+	else
+		echo "inactive"
+	fi
 }
 
 ###########################################################
@@ -42,7 +42,6 @@ timer_state() {
 services_show() {
 	local timer
 	local service
-	local state
 
 	echo
 	echo "⚙️ Servicios FumetaOS"
@@ -52,9 +51,7 @@ services_show() {
 	echo "─────────"
 
 	for timer in $FUMETAOS_TIMERS; do
-		state="$(timer_state "$timer")"
-
-		if [ "$state" = "active" ]; then
+		if unit_is_active "$timer"; then
 			echo "🟢 $timer"
 		else
 			echo "🔴 $timer"
@@ -67,9 +64,7 @@ services_show() {
 	echo "──────────"
 
 	for service in $SYSTEM_SERVICES; do
-		state="$(service_state "$service")"
-
-		if [ "$state" = "active" ]; then
+		if unit_is_active "$service"; then
 			echo "🟢 $service"
 		else
 			echo "🔴 $service"
