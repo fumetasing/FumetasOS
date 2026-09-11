@@ -1,0 +1,9 @@
+[Unit]
+Description=Vigilar AFP de Time Capsule y recuperar Jellyfin
+After=network-online.target docker.service fumetaos-timecapsule.service fumetaos-timecapsule-casaos.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/flock -n /run/lock/fumetaos-timecapsule-watch.lock /opt/fumetaos/bin/fumetaos-timecapsule-watch recover

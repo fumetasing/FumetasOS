@@ -1,0 +1,189 @@
+#!/bin/bash
+
+set -euo pipefail
+
+AFP_MOUNT="/mnt/timecapsule"
+CASAOS_MOUNT="/DATA/TimeCapsule"
+MEDIA_DIRECTORY="$CASAOS_MOUNT/Multimedia"
+
+READ_TIMEOUT=30
+RECOVERY_ATTEMPTS=3
+RECOVERY_DELAY=15
+
+esta_montado() {
+	findmnt -rn -M "$AFP_MOUNT" >/dev/null 2>&1
+}
+
+esta_publicado() {
+	findmnt -rn -M "$CASAOS_MOUNT" >/dev/null 2>&1
+}
+
+archivo_de_prueba() {
+	local archivo
+
+	if ! archivo="$(
+		timeout "$READ_TIMEOUT" \
+			find "$MEDIA_DIRECTORY" \
+			-type f \
+			-size +0c \
+			-print \
+			-quit 2>/dev/null
+	)"; then
+		return 1
+	fi
+
+	[ -n "$archivo" ] || return 1
+
+	printf '%s\n' "$archivo"
+}
+
+validar_lectura() {
+	local archivo
+
+	if ! esta_montado; then
+		echo "❌ AFP no está montada"
+		return 1
+	fi
+
+	if ! esta_publicado; then
+		echo "❌ AFP no está publicada para CasaOS"
+		return 1
+	fi
+
+	if ! archivo="$(archivo_de_prueba)"; then
+		echo "❌ No se pudo localizar un archivo de prueba en Time Capsule"
+		return 1
+	fi
+
+	if ! timeout "$READ_TIMEOUT" \
+		dd \
+		if="$archivo" \
+		of=/dev/null \
+		bs=1M \
+		count=1 \
+		status=none; then
+		echo "❌ La lectura AFP falló: $archivo"
+		return 1
+	fi
+
+	echo "✅ Lectura AFP correcta"
+}
+
+id_jellyfin() {
+	docker ps \
+		--quiet \
+		--filter 'name=^/jellyfin$' |
+		head -n 1
+}
+
+validar_jellyfin() {
+	local archivo
+	local archivo_contenedor
+	local jellyfin_id
+
+	jellyfin_id="$(id_jellyfin)"
+
+	if [ -z "$jellyfin_id" ]; then
+		echo "❌ Jellyfin no está en ejecución"
+		return 1
+	fi
+
+	if ! archivo="$(archivo_de_prueba)"; then
+		echo "❌ No se pudo localizar un archivo de prueba en Time Capsule"
+		return 1
+	fi
+
+	archivo_contenedor="/TimeCapsule${archivo#"$CASAOS_MOUNT"}"
+
+	if ! timeout "$READ_TIMEOUT" \
+		docker exec \
+		"$jellyfin_id" \
+		sh -c 'dd if="$1" of=/dev/null bs=1M count=1 status=none' \
+		sh \
+		"$archivo_contenedor"; then
+		echo "❌ Jellyfin no puede leer Time Capsule"
+		return 1
+	fi
+
+	echo "✅ Lectura desde Jellyfin correcta"
+}
+
+reiniciar_jellyfin() {
+	local jellyfin_id
+
+	jellyfin_id="$(id_jellyfin)"
+
+	if [ -z "$jellyfin_id" ]; then
+		echo "❌ Jellyfin no está en ejecución"
+		return 1
+	fi
+
+	echo "🔄 Reiniciando Jellyfin tras recuperar AFP"
+	docker restart "$jellyfin_id" >/dev/null
+}
+
+recuperar_afp() {
+	local intento
+
+	for intento in $(seq 1 "$RECOVERY_ATTEMPTS"); do
+		echo "🔧 Recuperación AFP: intento $intento/$RECOVERY_ATTEMPTS"
+
+		systemctl stop \
+			fumetaos-timecapsule-casaos.service \
+			fumetaos-timecapsule.service || true
+
+		systemctl reset-failed \
+			fumetaos-timecapsule.service \
+			fumetaos-timecapsule-casaos.service || true
+
+		if systemctl start fumetaos-timecapsule.service &&
+			systemctl start fumetaos-timecapsule-casaos.service &&
+			validar_lectura; then
+			return 0
+		fi
+
+		if [ "$intento" -lt "$RECOVERY_ATTEMPTS" ]; then
+			sleep "$RECOVERY_DELAY"
+		fi
+	done
+
+	return 1
+}
+
+comprobar() {
+	validar_lectura
+}
+
+recuperar() {
+	if validar_lectura; then
+		echo "ℹ️ Time Capsule está disponible; no se requiere recuperación"
+		return 0
+	fi
+
+	echo "⚠️ AFP está montada pero no responde; iniciando recuperación"
+
+	if ! recuperar_afp; then
+		echo "❌ No se pudo recuperar AFP"
+		return 20
+	fi
+
+	reiniciar_jellyfin
+	validar_jellyfin
+
+	echo "✅ AFP y Jellyfin recuperados automáticamente"
+}
+
+case "${1:-}" in
+check)
+	comprobar
+	;;
+recover)
+	recuperar
+	;;
+*)
+	echo "Uso:"
+	echo "fumetaos-timecapsule-watch check"
+	echo "fumetaos-timecapsule-watch recover"
+	exit 20
+	;;
+esac

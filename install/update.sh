@@ -18,6 +18,7 @@ fumetaos-timecapsule-mac-backup.timer
 fumetaos-recovery-backup.timer
 fumetaos-recovery-verify.timer
 fumetaos-system-upgrade.timer
+fumetaos-timecapsule-watch.timer
 "
 
 leer_version() {
