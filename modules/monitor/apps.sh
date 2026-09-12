@@ -146,9 +146,25 @@ app_version() {
 	local project="$1"
 	local container
 	local image
+	local version
 
 	container="$(main_container "$project")"
 	image="${CONTAINER_IMAGE[$container]-}"
+
+	version="$(
+		docker image inspect \
+			--format '{{index .Config.Labels "org.opencontainers.image.version"}}' \
+			"$image" 2>/dev/null || true
+	)"
+
+	case "$version" in
+	"" | "<no value>")
+		;;
+	*)
+		echo "$version"
+		return
+		;;
+	esac
 
 	image="${image%@*}"
 	image="${image##*/}"
@@ -162,7 +178,6 @@ app_version() {
 		;;
 	esac
 }
-
 app_health() {
 	local project="$1"
 	local container

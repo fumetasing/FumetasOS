@@ -8,7 +8,7 @@ ETIQUETA="latest"
 AUTH_HOST="auth.docker.io"
 REGISTRY_HOST="registry-1.docker.io"
 
-if ! referencia_local="$(sudo docker inspect --format '{{.Config.Image}}' "$CONTENEDOR" 2>/dev/null)"; then
+if ! referencia_local="$(docker inspect --format '{{.Config.Image}}' "$CONTENEDOR" 2>/dev/null)"; then
 	echo "❓ Transmission: contenedor no encontrado"
 	exit 10
 fi
@@ -19,7 +19,7 @@ case "$referencia_local" in
 	;;
 *)
 	digest_local="$(
-		sudo docker image inspect --format '{{index .RepoDigests 0}}' "$referencia_local" 2>/dev/null |
+		docker image inspect --format '{{index .RepoDigests 0}}' "$referencia_local" 2>/dev/null |
 			sed 's#.*@##'
 	)"
 	;;
@@ -31,7 +31,7 @@ if [[ ! "$digest_local" =~ ^sha256: ]]; then
 fi
 
 version_local="$(
-	sudo docker image inspect \
+	docker image inspect \
 		--format '{{index .Config.Labels "build_version"}}' \
 		"$referencia_local" 2>/dev/null || true
 )"
