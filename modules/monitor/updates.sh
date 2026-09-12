@@ -1,10 +1,5 @@
 #!/bin/bash
 
-###########################################################
-# FumetaOS
-# Monitor de actualizaciones
-###########################################################
-
 source "$(dirname "${BASH_SOURCE[0]}")/../../core/system.sh"
 
 WATCH=0
@@ -24,27 +19,62 @@ mostrar_estado() {
 	fi
 }
 
-if ! updates="$(updates_available)"; then
+actualizaciones_listadas() {
+	apt list --upgradable 2>/dev/null |
+		awk '
+			$0 !~ /^Listing/ && $0 ~ /\// {
+				total++
+			}
+
+			END {
+				print total + 0
+			}
+		'
+}
+
+if ! aplicables="$(updates_available)"; then
 	mostrar_estado "❓" "No se pudo comprobar las actualizaciones"
 	exit 20
 fi
 
-if [[ ! "$updates" =~ ^[0-9]+$ ]]; then
+if ! listadas="$(actualizaciones_listadas)"; then
+	mostrar_estado "❓" "No se pudo leer la lista de actualizaciones"
+	exit 20
+fi
+
+if [[ ! "$aplicables" =~ ^[0-9]+$ ]] ||
+	[[ ! "$listadas" =~ ^[0-9]+$ ]]; then
 	mostrar_estado "❓" "Resultado de actualizaciones no válido"
 	exit 20
 fi
 
-case "$updates" in
+if [ "$listadas" -lt "$aplicables" ]; then
+	listadas="$aplicables"
+fi
+
+graduales=$((listadas - aplicables))
+
+case "$listadas" in
 0)
 	mostrar_estado "🟢" "Sistema al día"
 	exit 0
 	;;
 [1-9] | [1-4][0-9])
-	mostrar_estado "🟡" "$updates actualizaciones aplicables"
+	if [ "$graduales" -gt 0 ]; then
+		mostrar_estado "🟡" \
+			"$listadas actualizaciones disponibles ($graduales en despliegue gradual)"
+	else
+		mostrar_estado "🟡" "$listadas actualizaciones aplicables"
+	fi
 	exit 10
 	;;
 *)
-	mostrar_estado "🔴" "$updates actualizaciones aplicables"
+	if [ "$graduales" -gt 0 ]; then
+		mostrar_estado "🔴" \
+			"$listadas actualizaciones disponibles ($graduales en despliegue gradual)"
+	else
+		mostrar_estado "🔴" "$listadas actualizaciones aplicables"
+	fi
 	exit 20
 	;;
 esac
