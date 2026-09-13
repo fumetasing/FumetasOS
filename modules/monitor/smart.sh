@@ -73,7 +73,7 @@ comprobar_disco() {
 	esac
 }
 
-comprobar_disco "$HDD_DEVICE"
 comprobar_disco "$SSD_DEVICE"
+comprobar_disco "$HDD_DEVICE"
 
 exit "$ERROR"
