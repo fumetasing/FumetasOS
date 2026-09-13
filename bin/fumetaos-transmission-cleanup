@@ -1,0 +1,36 @@
+#!/bin/bash
+# Elimina de Transmission torrents terminados e inactivos.
+# Nunca elimina los archivos descargados.
+
+set -o pipefail
+
+LISTA="$(
+  docker exec transmission sh -c '
+    /usr/bin/transmission-remote \
+      --auth "${USER}:${PASS}" \
+      --list
+  '
+)"
+
+IDS="$(
+  printf '%s\n' "$LISTA" |
+    awk '$1 ~ /^[0-9]+$/ && $2 == "100%" && $4 == "Done" && $8 == "Idle" { print $1 }'
+)"
+
+if [ -z "$IDS" ]; then
+  echo "ℹ️ No hay torrents terminados pendientes de retirar."
+  exit 0
+fi
+
+while IFS= read -r ID; do
+  [ -n "$ID" ] || continue
+
+  docker exec transmission sh -c '
+    /usr/bin/transmission-remote \
+      --auth "${USER}:${PASS}" \
+      --torrent "'"$ID"'" \
+      --remove
+  '
+
+  echo "✅ Torrent $ID retirado de la lista; sus archivos se conservan."
+done <<<"$IDS"
