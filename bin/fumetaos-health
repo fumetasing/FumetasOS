@@ -149,7 +149,7 @@ ejecutar_seccion \
 	/opt/fumetaos/modules/monitor/backups.sh
 
 ejecutar_seccion \
-	"💚 SMART" \
+	"🛠️ SMART" \
 	/opt/fumetaos/modules/monitor/smart.sh
 
 ejecutar_seccion \
@@ -161,7 +161,7 @@ ejecutar_seccion \
 	/opt/fumetaos/modules/monitor/temperature.sh
 
 ejecutar_seccion \
-	"🧠 Memoria" \
+	"⚙️ Memoria" \
 	/opt/fumetaos/modules/monitor/memory.sh
 
 ejecutar_seccion \

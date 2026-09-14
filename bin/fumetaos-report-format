@@ -27,10 +27,10 @@ while IFS= read -r line; do
 		"🔒 Seguridad" | \
 		"⏱️ Timers FumetaOS" | \
 		"💾 Copias de seguridad" | \
-		"💚 SMART" | \
+		"🛠️ SMART" | \
 		"💾 Discos" | \
 		"🌡️ Temperatura" | \
-		"🧠 Memoria" | \
+		"⚙️ Memoria" | \
 		"🖥️ Máquinas virtuales" | \
 		"📦 Aplicaciones" | \
 		"📦 Actualizaciones")
