@@ -113,6 +113,10 @@ app_port() {
 	local ports
 
 	case "$project" in
+	adguard-home)
+		echo "3001"
+		return
+		;;
 	big-bear-immich)
 		echo "2283"
 		return
