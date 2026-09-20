@@ -1,0 +1,14 @@
+[Unit]
+Description=Protección de red para puertos publicados por Docker
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fumetaos/bin/fumetaos-docker-firewall apply
+ExecStop=/opt/fumetaos/bin/fumetaos-docker-firewall remove
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

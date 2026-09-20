@@ -1,0 +1,100 @@
+#!/bin/bash
+
+set -euo pipefail
+
+CHAIN="FUMETAOS-DOCKER"
+LAN="192.168.1.0/24"
+TAILSCALE_INTERFACE="tailscale0"
+PEER_PORT="51413"
+
+obtener_interfaz_externa() {
+  ip -4 route get 1.1.1.1 |
+    awk '{
+      for (i = 1; i <= NF; i++) {
+        if ($i == "dev") {
+          print $(i + 1)
+          exit
+        }
+      }
+    }'
+}
+
+aplicar() {
+  local interfaz
+
+  interfaz="$(obtener_interfaz_externa)"
+  [ -n "$interfaz" ] ||
+    { echo "❌ No se pudo identificar la interfaz externa"; exit 20; }
+
+  ip link show "$interfaz" >/dev/null
+  ip link show "$TAILSCALE_INTERFACE" >/dev/null
+
+  iptables -w -N "$CHAIN" 2>/dev/null || true
+  iptables -w -F "$CHAIN"
+
+  while iptables -w -C DOCKER-USER -j "$CHAIN" 2>/dev/null; do
+    iptables -w -D DOCKER-USER -j "$CHAIN"
+  done
+
+  iptables -w -I DOCKER-USER 1 -j "$CHAIN"
+
+  iptables -w -A "$CHAIN" \
+    -m conntrack --ctstate ESTABLISHED,RELATED \
+    -j RETURN
+
+  iptables -w -A "$CHAIN" \
+    -i "$interfaz" \
+    -s "$LAN" \
+    -j RETURN
+
+  iptables -w -A "$CHAIN" \
+    -i "$TAILSCALE_INTERFACE" \
+    -j RETURN
+
+  iptables -w -A "$CHAIN" \
+    -i "$interfaz" \
+    -p tcp \
+    --dport "$PEER_PORT" \
+    -j RETURN
+
+  iptables -w -A "$CHAIN" \
+    -i "$interfaz" \
+    -p udp \
+    --dport "$PEER_PORT" \
+    -j RETURN
+
+  iptables -w -A "$CHAIN" \
+    -i "$interfaz" \
+    -j DROP
+
+  iptables -w -A "$CHAIN" -j RETURN
+
+  echo "✅ Docker protegido."
+  echo "LAN permitida: $LAN"
+  echo "Tailscale permitido: $TAILSCALE_INTERFACE"
+  echo "Transmission público: $PEER_PORT TCP y UDP"
+}
+
+eliminar() {
+  while iptables -w -C DOCKER-USER -j "$CHAIN" 2>/dev/null; do
+    iptables -w -D DOCKER-USER -j "$CHAIN"
+  done
+
+  iptables -w -F "$CHAIN" 2>/dev/null || true
+  iptables -w -X "$CHAIN" 2>/dev/null || true
+
+  echo "✅ Protección Docker eliminada."
+}
+
+case "${1:-apply}" in
+  apply)
+    aplicar
+    ;;
+  remove)
+    eliminar
+    ;;
+  *)
+    echo "Uso: $0 [apply|remove]"
+    exit 20
+    ;;
+esac
