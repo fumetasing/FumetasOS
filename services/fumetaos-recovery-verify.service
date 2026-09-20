@@ -3,6 +3,7 @@ Description=Verificación semanal de la copia cifrada de FumetaOS
 After=network-online.target
 Wants=network-online.target
 RequiresMountsFor=/mnt/datos
+OnFailure=fumetaos-recovery-alert@%n.service
 
 [Service]
 Type=oneshot

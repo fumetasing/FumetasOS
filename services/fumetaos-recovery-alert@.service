@@ -1,0 +1,9 @@
+[Unit]
+Description=Aviso Telegram por fallo de %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/fumetaos/bin/fumetaos-recovery-alert %i

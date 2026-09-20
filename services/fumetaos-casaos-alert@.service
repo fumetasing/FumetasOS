@@ -1,0 +1,8 @@
+[Unit]
+Description=Aviso Telegram por fallo de CasaOS (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/fumetaos/bin/fumetaos-casaos-alert %i

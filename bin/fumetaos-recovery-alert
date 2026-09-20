@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -u
+
+UNIT="${1:-desconocida}"
+TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
+
+case "$UNIT" in
+fumetaos-recovery-backup.service)
+  TITLE="Copia de recuperación cifrada"
+  ;;
+fumetaos-recovery-verify.service)
+  TITLE="Verificación de la copia cifrada"
+  ;;
+*)
+  TITLE="Tarea de recuperación"
+  ;;
+esac
+
+DETAIL="$(
+  systemctl show "$UNIT" \
+    --property=Result \
+    --property=ExecMainCode \
+    --property=ExecMainStatus \
+    --value 2>/dev/null |
+    paste -sd ' ' - ||
+    true
+)"
+
+MESSAGE="🔴 FumetaOS ERROR
+
+$TITLE fallida
+
+Unidad: $UNIT
+Resultado: ${DETAIL:-desconocido}
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
+
+echo "🔴 $TITLE fallida"
+
+if [ ! -x "$TELEGRAM_NOTIFY" ]; then
+  echo "⚠️ No se puede enviar Telegram: falta $TELEGRAM_NOTIFY"
+  exit 0
+fi
+
+if ! printf '%s\n' "$MESSAGE" | "$TELEGRAM_NOTIFY"; then
+  echo "⚠️ No se pudo enviar la notificación de Telegram"
+fi

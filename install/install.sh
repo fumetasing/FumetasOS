@@ -191,7 +191,11 @@ instalar() {
 	fi
 
 	echo "⚙️ Instalando servicios"
-	cp "$PACKAGE/services/"* /etc/systemd/system/
+	find "$PACKAGE/services" -type f -print0 |
+		while IFS= read -r -d "" SERVICE; do
+			DESTINO="/etc/systemd/system/${SERVICE#"$PACKAGE/services/"}"
+			install -D -m 644 "$SERVICE" "$DESTINO"
+		done
 
 	echo "🔄 Recargando systemd"
 	systemctl daemon-reload

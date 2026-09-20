@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -u
+
+SERVICIO="${1:-casaos.service}"
+TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
+
+RESULTADO="$(systemctl show "$SERVICIO" -p Result --value 2>/dev/null || true)"
+REGISTRO="$(
+  journalctl -u "$SERVICIO" -n 12 --no-pager 2>/dev/null |
+    tail -n 8 |
+    cut -c 1-180
+)"
+
+MENSAJE="🔴 FumetaOS AVISO
+
+CasaOS ha fallado y systemd ha intentado recuperarlo.
+
+Servicio: $SERVICIO
+Resultado: ${RESULTADO:-desconocido}
+
+Últimos registros:
+${REGISTRO:-no disponibles}
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
+
+if [ -x "$TELEGRAM_NOTIFY" ]; then
+  printf '%s\n' "$MENSAJE" | "$TELEGRAM_NOTIFY" ||
+    echo "⚠️ No se pudo enviar el aviso de Telegram"
+else
+  echo "⚠️ Falta $TELEGRAM_NOTIFY"
+fi
