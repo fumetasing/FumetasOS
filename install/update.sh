@@ -12,6 +12,7 @@ FUMETAOS_TIMERS="
 fumetaos-watch.timer
 fumetaos-history.timer
 fumetaos-history-clean.timer
+fumetaos-smart-test.timer
 fumetaos-docker-clean.timer
 fumetaos-report.timer
 fumetaos-backup.timer

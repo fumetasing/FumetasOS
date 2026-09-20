@@ -1,0 +1,10 @@
+[Unit]
+Description=Prueba SMART larga mensual de FumetaOS
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=7h
+ExecStart=/opt/fumetaos/bin/fumetaos-smart-test
