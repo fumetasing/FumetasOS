@@ -1,0 +1,9 @@
+[Unit]
+Description=Limpieza semanal de Docker de FumetaOS
+
+[Timer]
+OnCalendar=Sun *-*-* 08:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
