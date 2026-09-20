@@ -49,6 +49,10 @@ run_monitor \
 	/opt/fumetaos/modules/monitor/memory.sh
 
 run_monitor \
+	"🐳 Docker" \
+	/opt/fumetaos/modules/monitor/docker.sh
+
+run_monitor \
 	"📦 Actualizaciones" \
 	/opt/fumetaos/modules/monitor/updates.sh
 

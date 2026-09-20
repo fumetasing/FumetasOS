@@ -79,6 +79,7 @@ comprobar_silenciosamente() {
 		/opt/fumetaos/modules/monitor/disks.sh
 		/opt/fumetaos/modules/monitor/temperature.sh
 		/opt/fumetaos/modules/monitor/memory.sh
+		/opt/fumetaos/modules/monitor/docker.sh
 		/opt/fumetaos/modules/monitor/virtual-machines.sh
 		/opt/fumetaos/modules/monitor/apps.sh
 		/opt/fumetaos/modules/monitor/updates.sh
@@ -163,6 +164,10 @@ ejecutar_seccion \
 ejecutar_seccion \
 	"⚙️ Memoria" \
 	/opt/fumetaos/modules/monitor/memory.sh
+
+ejecutar_seccion \
+	"🐳 Docker" \
+	/opt/fumetaos/modules/monitor/docker.sh
 
 ejecutar_seccion \
 	"🖥️ Máquinas virtuales" \

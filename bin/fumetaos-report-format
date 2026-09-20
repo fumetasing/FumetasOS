@@ -31,6 +31,7 @@ while IFS= read -r line; do
 		"💾 Discos" | \
 		"🌡️ Temperatura" | \
 		"⚙️ Memoria" | \
+		"🐳 Docker" | \
 		"🖥️ Máquinas virtuales" | \
 		"📦 Aplicaciones" | \
 		"📦 Actualizaciones")
