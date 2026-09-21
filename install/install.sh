@@ -190,6 +190,15 @@ instalar() {
 		echo "⏭️ Conservando configuración existente"
 	fi
 
+	if [ -d "$PACKAGE/sudoers" ]; then
+		echo "🔐 Instalando permisos limitados"
+		find "$PACKAGE/sudoers" -maxdepth 1 -type f -print0 |
+			while IFS= read -r -d "" REGLA_SUDOERS; do
+				visudo -cf "$REGLA_SUDOERS" >/dev/null
+				install -m 440 "$REGLA_SUDOERS" "/etc/sudoers.d/$(basename "$REGLA_SUDOERS")"
+			done
+	fi
+
 	echo "⚙️ Instalando servicios"
 	find "$PACKAGE/services" -type f -print0 |
 		while IFS= read -r -d "" SERVICE; do
@@ -199,6 +208,11 @@ instalar() {
 
 	echo "🔄 Recargando systemd"
 	systemctl daemon-reload
+
+	if systemctl cat fumetaos-docker-firewall.service >/dev/null 2>&1; then
+		echo "🔒 Activando protección Docker"
+		systemctl enable --now fumetaos-docker-firewall.service
+	fi
 
 	echo
 	echo "⏱️ Activando timers"

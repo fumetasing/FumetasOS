@@ -24,7 +24,7 @@ registros_casaos() {
   if [ "$(id -u)" -eq 0 ]; then
     journalctl -u casaos.service --since "24 hours ago" --no-pager
   else
-    sudo journalctl -u casaos.service --since "24 hours ago" --no-pager
+    sudo -n /opt/fumetaos/bin/fumetaos-casaos-journal
   fi
 }
 
