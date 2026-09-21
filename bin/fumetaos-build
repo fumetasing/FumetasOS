@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 ###########################################################
 # FumetaOS
 # Package Builder
@@ -31,6 +33,21 @@ if [ ! -d "$PACKAGE" ]; then
 
 fi
 
+# Comprobar fuentes antes de modificar el paquete.
+for DIRECTORIO in bin core modules apps config services sudoers; do
+  test -d "$SOURCE/$DIRECTORIO" || {
+    echo "❌ Falta el directorio: $SOURCE/$DIRECTORIO"
+    exit 20
+  }
+done
+for ARCHIVO in install.sh update.sh; do
+  bash -n "$SOURCE/install/$ARCHIVO"
+done
+for REGLA in "$SOURCE/sudoers/"*; do
+  test -f "$REGLA"
+  sudo visudo -cf "$REGLA"
+done
+
 echo "🧹 Limpiando paquete anterior"
 
 sudo rm -rf \
@@ -39,7 +56,8 @@ sudo rm -rf \
 	"$PACKAGE/modules" \
 	"$PACKAGE/apps" \
 	"$PACKAGE/config" \
-	"$PACKAGE/services"
+	"$PACKAGE/services" \
+	"$PACKAGE/sudoers"
 
 echo "📦 Copiando bin"
 
@@ -77,6 +95,18 @@ sudo cp -r \
 	"$SOURCE/config" \
 	"$PACKAGE/"
 
+echo "🔐 Copiando permisos limitados"
+sudo cp -r "$SOURCE/sudoers" "$PACKAGE/"
+sudo chown -R root:root "$PACKAGE/sudoers"
+sudo find "$PACKAGE/sudoers" -type d -exec chmod 755 {} +
+sudo find "$PACKAGE/sudoers" -type f -exec chmod 440 {} +
+
+echo "📦 Copiando instaladores"
+for ARCHIVO in install.sh update.sh; do
+  sudo install -D -o root -g root -m 755 \
+    "$SOURCE/install/$ARCHIVO" "$PACKAGE/install/$ARCHIVO"
+done
+
 echo "🏷️ Copiando versión"
 
 sudo cp \
@@ -91,7 +121,8 @@ sudo chmod -R 755 "$PACKAGE/bin"
 sudo chmod -R 755 "$PACKAGE/core"
 sudo chmod -R 755 "$PACKAGE/modules"
 sudo chmod -R 755 "$PACKAGE/apps"
-sudo chmod -R 755 "$PACKAGE/services"
+sudo find "$PACKAGE/services" -type d -exec chmod 755 {} +
+sudo find "$PACKAGE/services" -type f -exec chmod 644 {} +
 
 echo
 

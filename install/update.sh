@@ -174,7 +174,14 @@ actualizar() {
 
 	echo
 	echo "🩺 Ejecutando Doctor"
-	"$BASE/bin/fumetaos-doctor"
+	if "$BASE/bin/fumetaos-doctor"; then
+		:
+	else
+		ESTADO_DOCTOR=$?
+		echo "❌ Doctor ha detectado problemas; revisa las comprobaciones anteriores." >&2
+		echo "Los cambios aplicados no se han revertido." >&2
+		exit "$ESTADO_DOCTOR"
+	fi
 
 	echo
 	echo "✅ Actualización completada"

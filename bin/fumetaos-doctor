@@ -149,3 +149,10 @@ check "Histórico funcionando" test -s "$DATA_DIR/history.log"
 echo
 echo "Resultado: $PUNTOS/$TOTAL"
 echo
+
+# Resultado utilizable por otros programas.
+if [ "$PUNTOS" -eq "$TOTAL" ]; then
+  exit 0
+fi
+
+exit 20
