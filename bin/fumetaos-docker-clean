@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# Limpieza segura de Docker:
+# Limpieza semanal segura de Docker:
 # - Borra caché de compilación sin uso.
-# - Borra imágenes huérfanas con más de siete días.
+# - Borra todas las imágenes huérfanas (sin etiqueta).
+# - Docker nunca elimina imágenes usadas por contenedores.
 # - Nunca borra contenedores, volúmenes ni imágenes etiquetadas.
 
 set -euo pipefail
 
 if ! docker info >/dev/null 2>&1; then
-        echo "❌ Docker no está disponible"
-        exit 20
+  echo "❌ Docker no está disponible"
+  exit 20
 fi
 
 echo "🐳 Limpieza semanal segura de Docker"
@@ -22,10 +23,8 @@ echo "===== CACHÉ SIN USO ====="
 docker builder prune --all --force
 
 echo
-echo "===== IMÁGENES HUÉRFANAS DE MÁS DE 7 DÍAS ====="
-docker image prune \
-        --filter "until=168h" \
-        --force
+echo "===== IMÁGENES HUÉRFANAS ====="
+docker image prune --force
 
 echo
 echo "===== DESPUÉS ====="
