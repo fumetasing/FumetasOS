@@ -1,14 +1,8 @@
 #!/bin/bash
 
-###########################################################
-# FumetaOS
-# Monitor de seguridad
-###########################################################
-
 ERROR=0
 UFW_BIN="/usr/sbin/ufw"
-DOCKER_FIREWALL_SERVICE="fumetaos-docker-firewall.service"
-DOCKER_CHAIN="FUMETAOS-DOCKER"
+DOCKER_STATUS="/opt/fumetaos/bin/fumetaos-docker-firewall-status"
 
 elevar_error() {
   if [ "$1" -gt "$ERROR" ]; then
@@ -16,47 +10,17 @@ elevar_error() {
   fi
 }
 
-obtener_interfaz_externa() {
-  ip -4 route get 1.1.1.1 2>/dev/null |
-    awk '{
-      for (i = 1; i <= NF; i++) {
-        if ($i == "dev") {
-          print $(i + 1)
-          exit
-        }
-      }
-    }'
-}
-
 comprobar_proteccion_docker() {
-  local interfaz
-
   echo
 
-  if ! command -v iptables >/dev/null 2>&1; then
-    echo "🔴 Protección Docker: iptables no disponible"
+  if [ ! -x "$DOCKER_STATUS" ]; then
+    echo "🔴 Protección Docker: verificador no disponible"
     elevar_error 20
     return
   fi
 
-  if ! sudo -n systemctl is-enabled --quiet "$DOCKER_FIREWALL_SERVICE"; then
-    echo "🔴 Protección Docker: servicio no habilitado"
-    elevar_error 20
-    return
-  fi
-
-  if ! sudo -n systemctl is-active --quiet "$DOCKER_FIREWALL_SERVICE"; then
-    echo "🔴 Protección Docker: servicio inactivo"
-    elevar_error 20
-    return
-  fi
-
-  interfaz="$(obtener_interfaz_externa)"
-
-  if [ -z "$interfaz" ] ||
-     ! sudo -n iptables -w -C DOCKER-USER -j "$DOCKER_CHAIN" 2>/dev/null ||
-     ! sudo -n iptables -w -C "$DOCKER_CHAIN" -i "$interfaz" -j DROP 2>/dev/null; then
-    echo "🔴 Protección Docker: reglas incompletas"
+  if ! sudo -n "$DOCKER_STATUS" >/dev/null 2>&1; then
+    echo "🔴 Protección Docker: no está activa o no se puede verificar"
     elevar_error 20
     return
   fi
@@ -66,10 +30,6 @@ comprobar_proteccion_docker() {
 }
 
 echo
-
-###########################################################
-# Firewall
-###########################################################
 
 if [ ! -x "$UFW_BIN" ]; then
   echo "🔴 Firewall UFW no instalado"
@@ -89,10 +49,6 @@ else
   echo "🔴 Firewall UFW inactivo"
   elevar_error 20
 fi
-
-###########################################################
-# Políticas
-###########################################################
 
 POLICY="$(
   sudo -n "$UFW_BIN" status verbose 2>/dev/null |

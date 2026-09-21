@@ -31,6 +31,16 @@ firewall_active() {
 		grep -q "Status: active"
 }
 
+casaos_journal_access() {
+	[ -x /opt/fumetaos/bin/fumetaos-casaos-journal ] &&
+		sudo -n /opt/fumetaos/bin/fumetaos-casaos-journal >/dev/null 2>&1
+}
+
+docker_firewall_active() {
+	[ -x /opt/fumetaos/bin/fumetaos-docker-firewall-status ] &&
+		sudo -n /opt/fumetaos/bin/fumetaos-docker-firewall-status >/dev/null 2>&1
+}
+
 mac_backup_after_timecapsule() {
 	systemctl cat fumetaos-timecapsule-mac-backup.service 2>/dev/null |
 		grep -qx 'OnSuccess=fumetaos-mac-backup.service'
@@ -77,6 +87,8 @@ echo "🔒 Seguridad"
 echo
 
 check "Firewall UFW" firewall_active
+check "Protección Docker" docker_firewall_active
+check "Registro CasaOS" casaos_journal_access
 
 echo
 echo "⚙️ Servicios"
@@ -125,6 +137,7 @@ check "Paquete bin" test -d "$PACKAGE_DIR/bin"
 check "Paquete core" test -d "$PACKAGE_DIR/core"
 check "Paquete modules" test -d "$PACKAGE_DIR/modules"
 check "Paquete services" test -d "$PACKAGE_DIR/services"
+check "Paquete sudoers" test -d "$PACKAGE_DIR/sudoers"
 
 echo
 echo "💾 Datos"
