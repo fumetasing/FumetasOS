@@ -1,0 +1,115 @@
+#!/bin/bash
+
+# Una sola cadena nocturna: cada servicio empieza al terminar el anterior.
+set -uo pipefail
+
+VERIFY_STAMP=/var/lib/fumetaos/nightly-verify-last-success
+SMART_STAMP=/var/lib/fumetaos/nightly-smart-last-attempt
+declare -a FAILED=()
+
+if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
+    printf '%s\n' \
+        '00:30 → copia local' \
+        'después → Time Capsule al Mac' \
+        'después → copia de recuperación' \
+        'después → espejo general al Mac' \
+        'después → actualización de Ubuntu' \
+        'los lunes, después → verificación cifrada' \
+        'el primer sábado de cada mes, al final → prueba SMART larga'
+    exit 0
+fi
+
+if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
+    echo '❌ Uso: ejecutar sin argumentos como root (o --plan)' >&2
+    exit 20
+fi
+
+START_DAY=$(date +%u)
+START_MONTH=$(date +%Y-%m)
+START_DAY_OF_MONTH=$(date +%-d)
+exec 9>/run/lock/fumetaos-nightly.lock
+if ! flock -n 9; then
+    echo '❌ Ya hay una cadena nocturna en curso' >&2
+    exit 20
+fi
+
+run_step() {
+    local label="$1"
+    local unit="$2"
+
+    echo
+    echo "▶️ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
+
+    # Para Type=oneshot, systemctl start espera hasta su finalización.
+    if systemctl start "$unit"; then
+        echo "✅ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
+        return 0
+    fi
+
+    echo "🔴 $label ha fallado — $(date '+%d/%m/%Y %H:%M:%S %Z')" >&2
+    FAILED+=("$unit")
+    return 1
+}
+
+verify_due() {
+    local last_success
+    [ "$START_DAY" -eq 1 ] && return 0
+    [ -f "$VERIFY_STAMP" ] || return 1
+    last_success=$(stat -c %Y "$VERIFY_STAMP") || return 1
+    [ $(( $(date +%s) - last_success )) -ge $((7 * 24 * 3600)) ]
+}
+
+smart_due() {
+    local first_weekday first_saturday last_attempt=''
+
+    first_weekday=$(date -d "$START_MONTH-01" +%u) || return 1
+    first_saturday=$((1 + (6 - first_weekday + 7) % 7))
+    [ "$START_DAY_OF_MONTH" -ge "$first_saturday" ] || return 1
+
+    if [ -f "$SMART_STAMP" ]; then
+        last_attempt=$(< "$SMART_STAMP")
+    fi
+    [ "$last_attempt" != "$START_MONTH" ]
+}
+
+echo '🌙 Cadena nocturna FumetaOS'
+echo "Inicio: $(date '+%d/%m/%Y %H:%M:%S %Z')"
+
+run_step 'Copia local' fumetaos-backup.service
+run_step 'Time Capsule → Mac' fumetaos-timecapsule-mac-backup.service
+run_step 'Copia de recuperación' fumetaos-recovery-backup.service
+run_step 'Espejo general → Mac' fumetaos-mac-backup.service
+run_step 'Actualización de Ubuntu' fumetaos-system-upgrade.service
+
+if verify_due; then
+    if run_step 'Verificación cifrada semanal' fumetaos-recovery-verify.service; then
+        if ! install -d -m 755 /var/lib/fumetaos || ! touch "$VERIFY_STAMP"; then
+            echo '🔴 No se pudo registrar la verificación correcta' >&2
+            FAILED+=('registro-de-verificación')
+        fi
+    fi
+else
+    echo
+    echo 'ℹ️ Verificación cifrada: lunes, o tras un lunes perdido por apagado'
+fi
+
+if smart_due; then
+    if install -d -m 755 /var/lib/fumetaos &&
+        printf '%s\n' "$START_MONTH" > "$SMART_STAMP"; then
+        run_step 'Prueba SMART larga mensual' fumetaos-smart-test.service
+    else
+        echo '🔴 No se pudo registrar el intento mensual de SMART' >&2
+        FAILED+=('registro-de-SMART')
+    fi
+else
+    echo
+    echo 'ℹ️ Prueba SMART larga: primer sábado del mes, o recuperación de esa cita mensual'
+fi
+
+echo
+if [ "${#FAILED[@]}" -gt 0 ]; then
+    echo "🔴 Cadena terminada con errores: ${FAILED[*]}" >&2
+    exit 20
+fi
+
+echo '✅ Cadena nocturna completada'

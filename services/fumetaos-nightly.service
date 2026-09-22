@@ -1,0 +1,12 @@
+[Unit]
+Description=Cadena nocturna de copias y actualización de FumetaOS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=infinity
+ExecStart=/opt/fumetaos/bin/fumetaos-nightly

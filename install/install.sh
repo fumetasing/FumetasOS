@@ -13,14 +13,9 @@ FUMETAOS_TIMERS="
 fumetaos-watch.timer
 fumetaos-history.timer
 fumetaos-history-clean.timer
-fumetaos-smart-test.timer
 fumetaos-docker-clean.timer
 fumetaos-report.timer
-fumetaos-backup.timer
-fumetaos-mac-backup.timer
-fumetaos-recovery-backup.timer
-fumetaos-recovery-verify.timer
-fumetaos-system-upgrade.timer
+fumetaos-nightly.timer
 fumetaos-timecapsule-watch.timer
 "
 
@@ -212,6 +207,27 @@ instalar() {
 	if systemctl cat fumetaos-docker-firewall.service >/dev/null 2>&1; then
 		echo "🔒 Activando protección Docker"
 		systemctl enable --now fumetaos-docker-firewall.service
+	fi
+
+	echo
+	echo "⛓️ Desactivando horarios antiguos de copias y actualización"
+	for TIMER in \
+		fumetaos-backup.timer \
+		fumetaos-timecapsule-mac-backup.timer \
+		fumetaos-mac-backup.timer \
+		fumetaos-recovery-backup.timer \
+		fumetaos-recovery-verify.timer \
+		fumetaos-system-upgrade.timer \
+		fumetaos-smart-test.timer \
+		apt-daily.timer \
+		apt-daily-upgrade.timer; do
+		systemctl disable --now "$TIMER" || true
+	done
+
+	# Evitar que Persistent=true lance una copia al activar el timer por primera vez.
+	if [ ! -e /var/lib/systemd/timers/stamp-fumetaos-nightly.timer ]; then
+		install -d -m 755 /var/lib/systemd/timers || exit 20
+		touch /var/lib/systemd/timers/stamp-fumetaos-nightly.timer || exit 20
 	fi
 
 	echo

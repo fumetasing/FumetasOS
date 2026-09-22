@@ -9,9 +9,12 @@ NOW=$(date +%s)
 DAILY_LIMIT=$((30 * 3600))
 WEEKLY_LIMIT=$((8 * 24 * 3600))
 
+LOCAL="fumetaos-backup.service"
 TC="fumetaos-timecapsule-mac-backup.service"
+RECOVERY="fumetaos-recovery-backup.service"
 GENERAL="fumetaos-mac-backup.service"
-TC_TIMER="fumetaos-timecapsule-mac-backup.timer"
+VERIFY="fumetaos-recovery-verify.service"
+NIGHTLY_TIMER="fumetaos-nightly.timer"
 
 elevar_error() {
 	if [ "$1" -gt "$ERROR" ]; then
@@ -50,19 +53,18 @@ ultimo_evento() {
 }
 
 UNITS=(
+	"$LOCAL"
 	"$TC"
+	"$RECOVERY"
 	"$GENERAL"
-	fumetaos-recovery-backup.service
-	fumetaos-recovery-verify.service
+	"$VERIFY"
 )
 
 TIMERS=(
-	"$TC_TIMER"
-	fumetaos-recovery-backup.timer
-	fumetaos-recovery-verify.timer
+	"$NIGHTLY_TIMER"
 )
 
-declare -a STATE RESULT LOADED OK BAD HISTORY CHAIN
+declare -a STATE RESULT LOADED OK BAD HISTORY
 declare -A TIMER_STATE TIMER_NEXT
 
 leer_servicio() {
@@ -97,16 +99,6 @@ leer_servicio() {
 				;;
 			esac
 		done <<<"$output"
-	fi
-
-	if [ "$idx" -eq 0 ]; then
-		CHAIN[0]=$(
-			timeout 5 systemctl show \
-				"$unit" \
-				-p OnSuccess \
-				--value \
-				2>/dev/null
-		)
 	fi
 
 	HISTORY[$idx]=1
@@ -235,7 +227,6 @@ mostrar_copia() {
 	local next
 	local last
 	local age=0
-	local chain
 
 	next="${TIMER_NEXT[$timer]}"
 
@@ -298,29 +289,23 @@ mostrar_copia() {
 		detail="${detail:+$detail. }Sin próxima fecha disponible"
 	fi
 
-	if [ "$unit" = "$GENERAL" ]; then
-		next="Al terminar Time Capsule → Mac (programada: $next)"
-		chain="${CHAIN[0]:-}"
-
-		case " $chain " in
-		*" $GENERAL "*) ;;
-		*)
-			level=20
-			detail="${detail:+$detail. }Enlace automático de la cadena no configurado"
-			;;
-		esac
-
-		if ! en_curso "$idx"; then
-			if en_curso 0; then
-				[ "$level" -lt 10 ] && level=10
-				detail="${detail:+$detail. }Esperando a que termine Time Capsule"
-
-			elif [ "${LOADED[0]}" != "loaded" ] || ha_fallado 0; then
-				level=20
-				detail="${detail:+$detail. }Cadena bloqueada por Time Capsule"
-			fi
-		fi
-	fi
+	case "$unit" in
+	"$LOCAL")
+		next="Inicio de cadena: $next"
+		;;
+	"$TC")
+		next="Tras la copia local (cadena inicia: $next)"
+		;;
+	"$RECOVERY")
+		next="Tras Time Capsule → Mac (cadena inicia: $next)"
+		;;
+	"$GENERAL")
+		next="Tras la recuperación (cadena inicia: $next)"
+		;;
+	"$VERIFY")
+		next="Los lunes, tras actualizar Ubuntu (cadena inicia a las 00:30)"
+		;;
+	esac
 
 	case "$level" in
 	10)
@@ -353,28 +338,35 @@ mostrar_usb
 echo
 mostrar_copia \
 	0 \
-	"$TC_TIMER" \
-	"Time Capsule → Mac" \
+	"$NIGHTLY_TIMER" \
+	"Copia local" \
 	"$DAILY_LIMIT"
 
 echo
 mostrar_copia \
 	1 \
-	"$TC_TIMER" \
-	"Espejo general al Mac" \
+	"$NIGHTLY_TIMER" \
+	"Time Capsule → Mac" \
 	"$DAILY_LIMIT"
 
 echo
 mostrar_copia \
 	2 \
-	fumetaos-recovery-backup.timer \
+	"$NIGHTLY_TIMER" \
 	"Recuperación cifrada y máquinas virtuales" \
 	"$DAILY_LIMIT"
 
 echo
 mostrar_copia \
 	3 \
-	fumetaos-recovery-verify.timer \
+	"$NIGHTLY_TIMER" \
+	"Espejo general al Mac" \
+	"$DAILY_LIMIT"
+
+echo
+mostrar_copia \
+	4 \
+	"$NIGHTLY_TIMER" \
 	"Verificación cifrada" \
 	"$WEEKLY_LIMIT"
 

@@ -41,15 +41,45 @@ docker_firewall_active() {
 		sudo -n /opt/fumetaos/bin/fumetaos-docker-firewall-status >/dev/null 2>&1
 }
 
-mac_backup_after_timecapsule() {
-	systemctl cat fumetaos-timecapsule-mac-backup.service 2>/dev/null |
-		grep -qx 'OnSuccess=fumetaos-mac-backup.service'
+nightly_chain_configured() {
+	local timer
+
+	[ -x /opt/fumetaos/bin/fumetaos-nightly ] || return 1
+	[ -x /opt/fumetaos/bin/fumetaos-smart-test ] || return 1
+	systemctl is-enabled --quiet fumetaos-nightly.timer || return 1
+	systemctl is-active --quiet fumetaos-nightly.timer || return 1
+	systemctl cat fumetaos-nightly.timer 2>/dev/null |
+		grep -Fqx 'OnCalendar=*-*-* 00:30:00' || return 1
+	[ -z "$(systemctl show fumetaos-timecapsule-mac-backup.service -p OnSuccess --value)" ] || return 1
+
+	for timer in \
+		fumetaos-backup.timer \
+		fumetaos-timecapsule-mac-backup.timer \
+		fumetaos-mac-backup.timer \
+		fumetaos-recovery-backup.timer \
+		fumetaos-recovery-verify.timer \
+		fumetaos-system-upgrade.timer \
+		fumetaos-smart-test.timer; do
+		if systemctl is-enabled --quiet "$timer" ||
+			systemctl is-active --quiet "$timer"; then
+			return 1
+		fi
+	done
+
+	return 0
 }
 
-daily_upgrade_timer() {
-	systemctl is-active --quiet fumetaos-system-upgrade.timer &&
-		systemctl cat fumetaos-system-upgrade.timer 2>/dev/null |
-		grep -Fqx 'OnCalendar=*-*-* 05:30:00'
+ubuntu_automatic_timers_disabled() {
+	local timer
+
+	for timer in apt-daily.timer apt-daily-upgrade.timer; do
+		if systemctl is-enabled --quiet "$timer" ||
+			systemctl is-active --quiet "$timer"; then
+			return 1
+		fi
+	done
+
+	return 0
 }
 
 backup_disponible() {
@@ -108,8 +138,8 @@ for TIMER in $FUMETAOS_TIMERS; do
 	check "$TIMER" systemctl is-active --quiet "$TIMER"
 done
 
-check "Copia al Mac encadenada" mac_backup_after_timecapsule
-check "Actualización Ubuntu diaria (05:30)" daily_upgrade_timer
+check "Cadena nocturna de copias y actualización (00:30)" nightly_chain_configured
+check "Actualizaciones automáticas de Ubuntu fuera de la cadena desactivadas" ubuntu_automatic_timers_disabled
 
 echo
 echo "📦 Aplicaciones"

@@ -1,0 +1,10 @@
+[Unit]
+Description=Iniciar cadena nocturna de FumetaOS a las 00:30
+
+[Timer]
+OnCalendar=*-*-* 00:30:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
