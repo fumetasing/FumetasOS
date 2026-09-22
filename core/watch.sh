@@ -76,7 +76,8 @@ check_services() {
 
 		elif [ "$CURRENT" = "ok" ]; then
 
-			if [ "$OLD" = "warning" ] || [ "$OLD" = "failed" ]; then
+			if [ "$OLD" = "failed" ] ||
+				{ [ "$SERVICE" != "casaos" ] && [ "$OLD" = "warning" ]; }; then
 
 				event_recovery \
 					"Servicio recuperado" \
