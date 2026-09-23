@@ -74,6 +74,7 @@ comprobar_silenciosamente() {
 		/opt/fumetaos/modules/monitor/timecapsule.sh
 		/opt/fumetaos/modules/monitor/security.sh
 		/opt/fumetaos/modules/monitor/timers.sh
+		/opt/fumetaos/modules/monitor/nightly.sh
 		/opt/fumetaos/modules/monitor/backups.sh
 		/opt/fumetaos/modules/monitor/smart.sh
 		/opt/fumetaos/modules/monitor/disks.sh
@@ -144,6 +145,10 @@ ejecutar_seccion \
 ejecutar_seccion \
 	"⏱️ Timers FumetaOS" \
 	/opt/fumetaos/modules/monitor/timers.sh
+
+ejecutar_seccion \
+	"🌙 Cadena nocturna" \
+	/opt/fumetaos/modules/monitor/nightly.sh
 
 ejecutar_seccion \
 	"💾 Copias de seguridad" \

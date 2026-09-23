@@ -5,6 +5,7 @@ set -uo pipefail
 
 VERIFY_STAMP=/var/lib/fumetaos/nightly-verify-last-success
 SMART_STAMP=/var/lib/fumetaos/nightly-smart-last-attempt
+STATUS_FILE=/var/lib/fumetaos-nightly-status
 declare -a FAILED=()
 
 if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
@@ -33,9 +34,53 @@ if ! flock -n 9; then
     exit 20
 fi
 
+START_TIME=$(date +%s)
+CURRENT_STEP='Preparación'
+STATUS_FINALIZED=0
+STATUS_WRITE_FAILED=0
+
+write_status() {
+    local result="$1"
+    local end_time="$2"
+    local temporary failed_list='' item
+
+    for item in "${FAILED[@]}"; do
+        if [ -n "$failed_list" ]; then
+            failed_list+=', '
+        fi
+        failed_list+="$item"
+    done
+
+    temporary=$(mktemp /var/lib/.fumetaos-nightly-status.XXXXXX) || return 1
+    if ! printf 'version=1\nstart=%s\nend=%s\nresult=%s\nstep=%s\nfailed=%s\n' \
+        "$START_TIME" "$end_time" "$result" "$CURRENT_STEP" "$failed_list" >"$temporary" ||
+        ! chmod 644 "$temporary" || ! mv -f "$temporary" "$STATUS_FILE"; then
+        rm -f -- "$temporary"
+        return 1
+    fi
+}
+
+on_exit() {
+    local exit_status=$?
+    trap - EXIT
+    if [ "$STATUS_FINALIZED" -eq 0 ]; then
+        write_status failed "$(date +%s)" ||
+            echo '🔴 No se pudo guardar el estado de la cadena nocturna' >&2
+    fi
+    exit "$exit_status"
+}
+
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+write_status running 0 || STATUS_WRITE_FAILED=1
+
 run_step() {
     local label="$1"
     local unit="$2"
+
+    CURRENT_STEP="$label"
+    write_status running 0 || STATUS_WRITE_FAILED=1
 
     echo
     echo "▶️ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
@@ -47,7 +92,7 @@ run_step() {
     fi
 
     echo "🔴 $label ha fallado — $(date '+%d/%m/%Y %H:%M:%S %Z')" >&2
-    FAILED+=("$unit")
+    FAILED+=("$label")
     return 1
 }
 
@@ -85,7 +130,7 @@ if verify_due; then
     if run_step 'Verificación cifrada semanal' fumetaos-recovery-verify.service; then
         if ! install -d -m 755 /var/lib/fumetaos || ! touch "$VERIFY_STAMP"; then
             echo '🔴 No se pudo registrar la verificación correcta' >&2
-            FAILED+=('registro-de-verificación')
+            FAILED+=('Registro de verificación')
         fi
     fi
 else
@@ -99,7 +144,7 @@ if smart_due; then
         run_step 'Prueba SMART larga mensual' fumetaos-smart-test.service
     else
         echo '🔴 No se pudo registrar el intento mensual de SMART' >&2
-        FAILED+=('registro-de-SMART')
+        FAILED+=('Registro de SMART')
     fi
 else
     echo
@@ -107,9 +152,21 @@ else
 fi
 
 echo
+CURRENT_STEP='Finalizada'
+if [ "$STATUS_WRITE_FAILED" -ne 0 ]; then
+    FAILED+=('Registro de estado')
+fi
 if [ "${#FAILED[@]}" -gt 0 ]; then
     echo "🔴 Cadena terminada con errores: ${FAILED[*]}" >&2
+    if write_status failed "$(date +%s)"; then
+        STATUS_FINALIZED=1
+    fi
     exit 20
 fi
 
+if ! write_status success "$(date +%s)"; then
+    echo '🔴 No se pudo guardar el resultado de la cadena nocturna' >&2
+    exit 20
+fi
+STATUS_FINALIZED=1
 echo '✅ Cadena nocturna completada'
