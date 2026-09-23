@@ -6,9 +6,10 @@ set -uo pipefail
 VERIFY_STAMP=/var/lib/fumetaos/nightly-verify-last-success
 SMART_STAMP=/var/lib/fumetaos/nightly-smart-last-attempt
 STATUS_FILE=/var/lib/fumetaos-nightly-status
+LOCK_FILE=/run/lock/fumetaos-nightly.lock
 declare -a FAILED=()
 
-if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
+print_plan() {
     printf '%s\n' \
         '00:30 → copia local' \
         'después → Time Capsule al Mac' \
@@ -17,27 +18,7 @@ if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
         'después → actualización de Ubuntu' \
         'los lunes, después → verificación cifrada' \
         'el primer sábado de cada mes, al final → prueba SMART larga'
-    exit 0
-fi
-
-if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
-    echo '❌ Uso: ejecutar sin argumentos como root (o --plan)' >&2
-    exit 20
-fi
-
-START_DAY=$(date +%u)
-START_MONTH=$(date +%Y-%m)
-START_DAY_OF_MONTH=$(date +%-d)
-exec 9>/run/lock/fumetaos-nightly.lock
-if ! flock -n 9; then
-    echo '❌ Ya hay una cadena nocturna en curso' >&2
-    exit 20
-fi
-
-START_TIME=$(date +%s)
-CURRENT_STEP='Preparación'
-STATUS_FINALIZED=0
-STATUS_WRITE_FAILED=0
+}
 
 write_status() {
     local result="$1"
@@ -51,7 +32,7 @@ write_status() {
         failed_list+="$item"
     done
 
-    temporary=$(mktemp /var/lib/.fumetaos-nightly-status.XXXXXX) || return 1
+    temporary=$(mktemp "$(dirname "$STATUS_FILE")/.fumetaos-nightly-status.XXXXXX") || return 1
     if ! printf 'version=1\nstart=%s\nend=%s\nresult=%s\nstep=%s\nfailed=%s\n' \
         "$START_TIME" "$end_time" "$result" "$CURRENT_STEP" "$failed_list" >"$temporary" ||
         ! chmod 644 "$temporary" || ! mv -f "$temporary" "$STATUS_FILE"; then
@@ -69,11 +50,6 @@ on_exit() {
     fi
     exit "$exit_status"
 }
-
-trap on_exit EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-write_status running 0 || STATUS_WRITE_FAILED=1
 
 run_step() {
     local label="$1"
@@ -117,6 +93,23 @@ smart_due() {
     [ "$last_attempt" != "$START_MONTH" ]
 }
 
+nightly_run() {
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+    echo '❌ Ya hay una cadena nocturna en curso' >&2
+    return 20
+fi
+
+START_TIME=$(date +%s)
+CURRENT_STEP='Preparación'
+STATUS_FINALIZED=0
+STATUS_WRITE_FAILED=0
+FAILED=()
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+write_status running 0 || STATUS_WRITE_FAILED=1
+
 echo '🌙 Cadena nocturna FumetaOS'
 echo "Inicio: $(date '+%d/%m/%Y %H:%M:%S %Z')"
 
@@ -128,7 +121,7 @@ run_step 'Actualización de Ubuntu' fumetaos-system-upgrade.service
 
 if verify_due; then
     if run_step 'Verificación cifrada semanal' fumetaos-recovery-verify.service; then
-        if ! install -d -m 755 /var/lib/fumetaos || ! touch "$VERIFY_STAMP"; then
+        if ! install -d -m 755 "$(dirname "$VERIFY_STAMP")" || ! touch "$VERIFY_STAMP"; then
             echo '🔴 No se pudo registrar la verificación correcta' >&2
             FAILED+=('Registro de verificación')
         fi
@@ -139,7 +132,7 @@ else
 fi
 
 if smart_due; then
-    if install -d -m 755 /var/lib/fumetaos &&
+    if install -d -m 755 "$(dirname "$SMART_STAMP")" &&
         printf '%s\n' "$START_MONTH" > "$SMART_STAMP"; then
         run_step 'Prueba SMART larga mensual' fumetaos-smart-test.service
     else
@@ -170,3 +163,25 @@ if ! write_status success "$(date +%s)"; then
 fi
 STATUS_FINALIZED=1
 echo '✅ Cadena nocturna completada'
+}
+
+nightly_main() {
+    if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
+        print_plan
+        return 0
+    fi
+
+    if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
+        echo '❌ Uso: ejecutar sin argumentos como root (o --plan)' >&2
+        return 20
+    fi
+
+    START_DAY=$(date +%u)
+    START_MONTH=$(date +%Y-%m)
+    START_DAY_OF_MONTH=$(date +%-d)
+    nightly_run
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    nightly_main "$@"
+fi
