@@ -55,6 +55,10 @@ else
 	echo "   CasaOS: $CASAOS_MOUNT"
 	echo "   Acceso: disponible"
 
+	ESPACIO="$(df -hP "$AFP_MOUNT" | awk 'NR == 2 { print $4 "|" $5 }')"
+	echo "   Libre: ${ESPACIO%|*}"
+	echo "   Uso:   ${ESPACIO#*|}"
+
 fi
 
 exit "$ERROR"

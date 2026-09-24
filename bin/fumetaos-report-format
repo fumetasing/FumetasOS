@@ -26,7 +26,6 @@ while IFS= read -r line; do
 		"💾 Time Capsule" | \
 		"🔒 Seguridad" | \
 		"⏱️ Timers FumetaOS" | \
-		"🌙 Cadena nocturna" | \
 		"💾 Copias de seguridad" | \
 		"🛠️ SMART" | \
 		"💾 Discos" | \
