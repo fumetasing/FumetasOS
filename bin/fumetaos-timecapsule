@@ -3,17 +3,13 @@
 set -euo pipefail
 
 MOUNTPOINT="/mnt/timecapsule"
-CREDENTIAL_FILE="/etc/fumetaos/timecapsule-password"
+CREDENTIAL_FILE="/etc/fumetaos/timecapsule-smb-credentials"
 
-AFP_USERNAME="Fumetasing"
-AFP_HOST="192.168.1.2"
-AFP_PORT="548"
-AFP_VOLUME="Data"
-
-NETATALK_CLIENT_VERSION="0.9.5"
-NETATALK_CLIENT_URL="https://github.com/Netatalk/netatalk-client/archive/refs/tags/${NETATALK_CLIENT_VERSION}.tar.gz"
-MOUNT_AFPFS="/usr/local/bin/mount_afpfs"
-AFP_CLIENT="/usr/local/bin/afp_client"
+SMB_USERNAME="admin"
+SMB_HOST="192.168.1.2"
+SMB_SHARE="Data"
+SMB_VERSION="3.1.1"
+MOUNT_CIFS="/usr/sbin/mount.cifs"
 
 mostrar_error() {
 	echo "❌ $1"
@@ -29,149 +25,74 @@ esta_montado() {
 	findmnt -rn -M "$MOUNTPOINT" >/dev/null 2>&1
 }
 
-cliente_instalado() {
-	[ -x "$MOUNT_AFPFS" ] &&
-		[ -x "$AFP_CLIENT" ]
+es_montaje_smb() {
+	[ "$(findmnt -rn -M "$MOUNTPOINT" -o FSTYPE 2>/dev/null)" = "cifs" ]
 }
 
-codificar_url() {
-	local VALUE="$1"
-	local RESULT=""
-	local CHARACTER=""
-	local ENCODED_CHARACTER=""
-	local INDEX=0
-
-	LC_ALL=C
-
-	for ((INDEX = 0; INDEX < ${#VALUE}; INDEX++)); do
-		CHARACTER="${VALUE:INDEX:1}"
-
-		case "$CHARACTER" in
-		[a-zA-Z0-9.~_-])
-			RESULT+="$CHARACTER"
-			;;
-		*)
-			printf -v ENCODED_CHARACTER '%%%02X' "'$CHARACTER"
-			RESULT+="$ENCODED_CHARACTER"
-			;;
-		esac
-	done
-
-	printf '%s' "$RESULT"
+cliente_instalado() {
+	[ -x "$MOUNT_CIFS" ]
 }
 
 instalar_cliente() {
-	local FORCE="${1:-}"
-	local BUILD_DIR=""
-	local SOURCE_ARCHIVE=""
-	local SOURCE_DIR=""
-
 	requiere_root
 
-	if cliente_instalado && [ "$FORCE" != "--force" ]; then
-		echo "✅ Cliente AFP ya instalado"
-		echo "   $MOUNT_AFPFS"
-		echo
-		echo "Para reconstruirlo: fumetaos-timecapsule install-client --force"
+	if cliente_instalado; then
+		echo "✅ Cliente SMB ya instalado"
+		echo "   $MOUNT_CIFS"
 		exit 0
 	fi
 
 	command -v apt-get >/dev/null 2>&1 ||
 		mostrar_error "APT no está disponible"
 
-	echo "📦 Instalando dependencias del cliente AFP"
-
+	echo "📦 Instalando cliente SMB"
 	export DEBIAN_FRONTEND=noninteractive
-
 	apt-get update
-
-	apt-get install \
-		--yes \
-		build-essential \
-		ca-certificates \
-		curl \
-		meson \
-		ninja-build \
-		pkg-config \
-		libfuse3-dev \
-		libgcrypt20-dev \
-		libreadline-dev
-
-	BUILD_DIR="$(mktemp -d /tmp/fumetaos-netatalk-client.XXXXXX)"
-	SOURCE_ARCHIVE="$BUILD_DIR/netatalk-client.tar.gz"
-
-	limpiar_instalacion() {
-		rm -rf "$BUILD_DIR"
-	}
-
-	trap limpiar_instalacion EXIT
-
-	echo "⬇️ Descargando Netatalk Client v${NETATALK_CLIENT_VERSION}"
-
-	curl \
-		--fail \
-		--location \
-		--retry 4 \
-		--retry-delay 2 \
-		--output "$SOURCE_ARCHIVE" \
-		"$NETATALK_CLIENT_URL"
-
-	tar \
-		--extract \
-		--gzip \
-		--file "$SOURCE_ARCHIVE" \
-		--directory "$BUILD_DIR"
-
-	SOURCE_DIR="$BUILD_DIR/netatalk-client-${NETATALK_CLIENT_VERSION}"
-
-	[ -d "$SOURCE_DIR" ] ||
-		mostrar_error "No se pudo extraer el código del cliente AFP"
-
-	echo "🔨 Compilando Netatalk Client v${NETATALK_CLIENT_VERSION}"
-
-	meson setup \
-		"$SOURCE_DIR/build" \
-		"$SOURCE_DIR" \
-		-Dbuildtype=release
-
-	meson compile -C "$SOURCE_DIR/build"
-	meson install -C "$SOURCE_DIR/build"
+	apt-get install --yes cifs-utils
 
 	cliente_instalado ||
-		mostrar_error "El cliente AFP no se instaló correctamente"
+		mostrar_error "El cliente SMB no se instaló correctamente"
 
-	echo "✅ Cliente AFP instalado correctamente"
-	echo "   $MOUNT_AFPFS"
+	echo "✅ Cliente SMB instalado correctamente"
 }
 
 mostrar_estado() {
-	echo "💾 Time Capsule AFP"
-	echo "   Servidor: $AFP_HOST"
-	echo "   Volumen: $AFP_VOLUME"
+	echo "💾 Time Capsule SMB"
+	echo "   Servidor: $SMB_HOST"
+	echo "   Recurso: $SMB_SHARE"
+	echo "   Protocolo: SMB $SMB_VERSION"
 	echo "   Punto interno: $MOUNTPOINT"
 	echo "   Punto CasaOS: /DATA/TimeCapsule"
 
 	if cliente_instalado; then
-		echo "✅ Cliente AFP instalado"
+		echo "✅ Cliente SMB instalado"
 	else
-		echo "❌ Cliente AFP no instalado"
+		echo "❌ Cliente SMB no instalado"
 	fi
 
-	if esta_montado; then
-		echo "✅ Time Capsule montada"
+	if es_montaje_smb; then
+		echo "✅ Time Capsule montada mediante SMB"
+	elif esta_montado; then
+		echo "🔴 El punto está ocupado por un montaje que no es SMB"
 	else
 		echo "🟡 Time Capsule no montada"
 	fi
 }
 
 montar() {
+	local SERVER_UID
+	local SERVER_GID
+
 	requiere_root
 
 	[ -r "$CREDENTIAL_FILE" ] ||
-		mostrar_error "No se puede leer la contraseña de la Time Capsule"
+		mostrar_error "No se pueden leer las credenciales SMB de la Time Capsule"
+
+	[ "$(stat -c '%a' "$CREDENTIAL_FILE")" = "600" ] ||
+		mostrar_error "Las credenciales SMB deben tener permisos 600"
 
 	cliente_instalado ||
-		mostrar_error "El cliente AFP no está instalado. Ejecuta: fumetaos-timecapsule install-client"
+		mostrar_error "El cliente SMB no está instalado. Ejecuta: fumetaos-timecapsule install-client"
 
 	install -d \
 		-o server \
@@ -179,30 +100,33 @@ montar() {
 		-m 0750 \
 		"$MOUNTPOINT"
 
-	if esta_montado; then
-		echo "✅ Time Capsule ya montada: $MOUNTPOINT"
+	if es_montaje_smb; then
+		echo "✅ Time Capsule ya montada mediante SMB: $MOUNTPOINT"
 		exit 0
 	fi
 
-	AFP_PASSWORD="$(<"$CREDENTIAL_FILE")"
-	AFP_PASSWORD_ENCODED="$(codificar_url "$AFP_PASSWORD")"
+	if esta_montado; then
+		mostrar_error "El punto $MOUNTPOINT está ocupado por un montaje que no es SMB"
+	fi
 
-	AFP_URL="afp://${AFP_USERNAME};AUTH=DHX2:${AFP_PASSWORD_ENCODED}@${AFP_HOST}:${AFP_PORT}/${AFP_VOLUME}"
+	SERVER_UID="$(id -u server)"
+	SERVER_GID="$(id -g server)"
 
-	unset AFP_PASSWORD
-	unset AFP_PASSWORD_ENCODED
+	echo "💾 Montando Time Capsule mediante SMB $SMB_VERSION en $MOUNTPOINT"
 
-	echo "💾 Montando Time Capsule en $MOUNTPOINT"
+	/usr/bin/mount \
+		-t cifs \
+		"//$SMB_HOST/$SMB_SHARE" \
+		"$MOUNTPOINT" \
+		-o "credentials=$CREDENTIAL_FILE,vers=$SMB_VERSION,uid=$SERVER_UID,gid=$SERVER_GID,forceuid,forcegid,file_mode=0666,dir_mode=0777,iocharset=utf8,noserverino"
 
-	"$MOUNT_AFPFS" \
-		-o rw,user=server,group=server \
-		"$AFP_URL" \
-		"$MOUNTPOINT"
+	es_montaje_smb ||
+		mostrar_error "El montaje SMB no se completó"
 
-	esta_montado ||
-		mostrar_error "El montaje AFP no se completó"
+	timeout 30 ls "$MOUNTPOINT" >/dev/null 2>&1 ||
+		mostrar_error "La Time Capsule se montó pero no responde"
 
-	echo "✅ Time Capsule montada correctamente"
+	echo "✅ Time Capsule montada correctamente mediante SMB"
 }
 
 desmontar() {
@@ -214,15 +138,13 @@ desmontar() {
 	fi
 
 	echo "🔌 Desmontando Time Capsule"
-
-	/usr/bin/fusermount3 -uz "$MOUNTPOINT"
-
+	/usr/bin/umount "$MOUNTPOINT"
 	echo "✅ Time Capsule desmontada"
 }
 
 case "${1:-}" in
 install-client)
-	instalar_cliente "${2:-}"
+	instalar_cliente
 	;;
 status)
 	mostrar_estado
@@ -235,7 +157,7 @@ unmount)
 	;;
 *)
 	echo "Uso:"
-	echo "fumetaos-timecapsule install-client [--force]"
+	echo "fumetaos-timecapsule install-client"
 	echo "fumetaos-timecapsule status"
 	echo "fumetaos-timecapsule mount"
 	echo "fumetaos-timecapsule unmount"

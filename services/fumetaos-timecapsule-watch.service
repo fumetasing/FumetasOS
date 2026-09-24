@@ -1,5 +1,5 @@
 [Unit]
-Description=Vigilar AFP de Time Capsule y recuperar Jellyfin
+Description=Vigilar SMB de Time Capsule y recuperar Jellyfin
 After=network-online.target docker.service fumetaos-timecapsule.service fumetaos-timecapsule-casaos.service
 Wants=network-online.target
 

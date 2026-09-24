@@ -1,34 +1,31 @@
 #!/bin/bash
 
 ###########################################################
-
 # FumetaOS
-
 # Monitor Time Capsule
-
 ###########################################################
 
-AFP_MOUNT="/mnt/timecapsule"
+TIMECAPSULE_MOUNT="/mnt/timecapsule"
 CASAOS_MOUNT="/DATA/TimeCapsule"
-AFP_CLIENT="/usr/local/bin/mount_afpfs"
+SMB_CLIENT="/usr/sbin/mount.cifs"
 
 ERROR=0
 
-if [ ! -x "$AFP_CLIENT" ]; then
+if [ ! -x "$SMB_CLIENT" ]; then
 
-	echo "🔴 Cliente AFP no disponible"
-	echo "   Esperado: $AFP_CLIENT"
+	echo "🔴 Cliente SMB no disponible"
+	echo "   Esperado: $SMB_CLIENT"
 	ERROR=20
 
 elif ! systemctl is-active --quiet fumetaos-timecapsule.service; then
 
-	echo "🔴 Servicio AFP de Time Capsule no activo"
+	echo "🔴 Servicio SMB de Time Capsule no activo"
 	ERROR=20
 
-elif ! findmnt -rn -M "$AFP_MOUNT" >/dev/null 2>&1; then
+elif [ "$(findmnt -rn -M "$TIMECAPSULE_MOUNT" -o FSTYPE 2>/dev/null)" != "cifs" ]; then
 
-	echo "🔴 Time Capsule AFP no montada"
-	echo "   Punto interno: $AFP_MOUNT"
+	echo "🔴 Time Capsule SMB no montada"
+	echo "   Punto interno: $TIMECAPSULE_MOUNT"
 	ERROR=20
 
 elif ! systemctl is-active --quiet fumetaos-timecapsule-casaos.service; then
@@ -50,12 +47,13 @@ elif ! ls "$CASAOS_MOUNT" >/dev/null 2>&1; then
 
 else
 
-	echo "🟢 Time Capsule AFP"
-	echo "   AFP: $AFP_MOUNT"
+	echo "🟢 Time Capsule SMB"
+	echo "   SMB: $TIMECAPSULE_MOUNT"
 	echo "   CasaOS: $CASAOS_MOUNT"
+	echo "   Protocolo: SMB 3.1.1"
 	echo "   Acceso: disponible"
 
-	ESPACIO="$(df -hP "$AFP_MOUNT" | awk 'NR == 2 { print $4 "|" $5 }')"
+	ESPACIO="$(df -hP "$TIMECAPSULE_MOUNT" | awk 'NR == 2 { print $4 "|" $5 }')"
 	echo "   Libre: ${ESPACIO%|*}"
 	echo "   Uso:   ${ESPACIO#*|}"
 

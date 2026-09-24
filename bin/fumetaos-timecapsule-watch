@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-AFP_MOUNT="/mnt/timecapsule"
+TIMECAPSULE_MOUNT="/mnt/timecapsule"
 CASAOS_MOUNT="/DATA/TimeCapsule"
 MEDIA_DIRECTORY="$CASAOS_MOUNT/Multimedia"
 
@@ -11,7 +11,7 @@ RECOVERY_ATTEMPTS=3
 RECOVERY_DELAY=15
 
 esta_montado() {
-	findmnt -rn -M "$AFP_MOUNT" >/dev/null 2>&1
+	[ "$(findmnt -rn -M "$TIMECAPSULE_MOUNT" -o FSTYPE 2>/dev/null)" = "cifs" ]
 }
 
 esta_publicado() {
@@ -33,7 +33,6 @@ archivo_de_prueba() {
 	fi
 
 	[ -n "$archivo" ] || return 1
-
 	printf '%s\n' "$archivo"
 }
 
@@ -41,12 +40,12 @@ validar_lectura() {
 	local archivo
 
 	if ! esta_montado; then
-		echo "❌ AFP no está montada"
+		echo "❌ SMB no está montado"
 		return 1
 	fi
 
 	if ! esta_publicado; then
-		echo "❌ AFP no está publicada para CasaOS"
+		echo "❌ SMB no está publicado para CasaOS"
 		return 1
 	fi
 
@@ -62,11 +61,11 @@ validar_lectura() {
 		bs=1M \
 		count=1 \
 		status=none; then
-		echo "❌ La lectura AFP falló: $archivo"
+		echo "❌ La lectura SMB falló: $archivo"
 		return 1
 	fi
 
-	echo "✅ Lectura AFP correcta"
+	echo "✅ Lectura SMB correcta"
 }
 
 id_jellyfin() {
@@ -118,15 +117,15 @@ reiniciar_jellyfin() {
 		return 1
 	fi
 
-	echo "🔄 Reiniciando Jellyfin tras recuperar AFP"
+	echo "🔄 Reiniciando Jellyfin tras recuperar SMB"
 	docker restart "$jellyfin_id" >/dev/null
 }
 
-recuperar_afp() {
+recuperar_smb() {
 	local intento
 
 	for intento in $(seq 1 "$RECOVERY_ATTEMPTS"); do
-		echo "🔧 Recuperación AFP: intento $intento/$RECOVERY_ATTEMPTS"
+		echo "🔧 Recuperación SMB: intento $intento/$RECOVERY_ATTEMPTS"
 
 		systemctl stop \
 			fumetaos-timecapsule-casaos.service \
@@ -160,17 +159,17 @@ recuperar() {
 		return 0
 	fi
 
-	echo "⚠️ AFP está montada pero no responde; iniciando recuperación"
+	echo "⚠️ SMB está montado pero no responde; iniciando recuperación"
 
-	if ! recuperar_afp; then
-		echo "❌ No se pudo recuperar AFP"
+	if ! recuperar_smb; then
+		echo "❌ No se pudo recuperar SMB"
 		return 20
 	fi
 
 	reiniciar_jellyfin
 	validar_jellyfin
 
-	echo "✅ AFP y Jellyfin recuperados automáticamente"
+	echo "✅ SMB y Jellyfin recuperados automáticamente"
 }
 
 case "${1:-}" in

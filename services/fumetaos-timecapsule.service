@@ -1,5 +1,5 @@
 [Unit]
-Description=Montaje AFP de la Time Capsule para CasaOS
+Description=Montaje SMB 3.1.1 de la Time Capsule para FumetaOS
 After=network-online.target
 Wants=network-online.target
 Before=docker.service casaos.service fumetaos-timecapsule-casaos.service
@@ -10,7 +10,6 @@ StartLimitBurst=12
 Type=oneshot
 RemainAfterExit=yes
 User=root
-LimitNOFILE=1024:1024
 Restart=on-failure
 RestartSec=15s
 TimeoutStartSec=90s
