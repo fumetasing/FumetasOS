@@ -41,6 +41,8 @@ mac_mirror_crear_ssh_command() {
 		--delete-delay
 		--itemize-changes
 		--out-format='%i'
+		--rsync-path=/opt/homebrew/bin/rsync
+		--protect-args
 	)
 
 	RSYNC_COPY_OPTIONS=(
@@ -51,6 +53,9 @@ mac_mirror_crear_ssh_command() {
 		--partial
 		--human-readable
 		--stats
+		--rsync-path=/opt/homebrew/bin/rsync
+		--protect-args
+		--progress
 	)
 }
 

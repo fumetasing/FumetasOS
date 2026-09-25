@@ -181,7 +181,7 @@ esac
 	mostrar_error "No existe el origen: $SOURCE_BASE"
 
 findmnt -T "$SOURCE_BASE" -no FSTYPE |
-	grep -q '^fuse\.' ||
+	grep -qx 'cifs' ||
 	mostrar_error "Time Capsule no está montada correctamente"
 
 [ -r "$SSH_KEY" ] ||
