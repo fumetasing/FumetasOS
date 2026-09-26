@@ -106,6 +106,29 @@ actualizar_directorio() {
 	}
 }
 
+configurar_journald() {
+	local JOURNALD_SOURCE="$PACKAGE/config/systemd/journald.conf.d/90-fumetaos.conf"
+	local JOURNALD_DEST="/etc/systemd/journald.conf.d/90-fumetaos.conf"
+
+	echo "🧾 Configurando retención del journal"
+
+	[ -f "$JOURNALD_SOURCE" ] || {
+		echo "❌ No existe la configuración de journald"
+		exit 20
+	}
+
+	install -D -m 644 \
+		"$JOURNALD_SOURCE" \
+		"$JOURNALD_DEST" || exit 20
+
+	systemctl restart systemd-journald.service || exit 20
+	systemctl is-active --quiet systemd-journald.service || exit 20
+
+	journalctl --rotate || exit 20
+	journalctl --vacuum-size=1G || exit 20
+
+	echo "✅ Journal limitado a 1 GB"
+}
 actualizar() {
 	echo
 	echo "🔄 FumetaOS Update"
@@ -122,6 +145,7 @@ actualizar() {
 	}
 
 	crear_backup
+	configurar_journald
 
 	actualizar_directorio "$PACKAGE/bin" "$BASE/bin" "binarios"
 	actualizar_directorio "$PACKAGE/core" "$BASE/core" "core"
