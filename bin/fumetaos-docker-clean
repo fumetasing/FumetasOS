@@ -2,9 +2,9 @@
 
 # Limpieza semanal segura de Docker:
 # - Borra caché de compilación sin uso.
-# - Borra todas las imágenes huérfanas (sin etiqueta).
+# - Borra imágenes de más de 7 días que no utiliza ningún contenedor.
 # - Docker nunca elimina imágenes usadas por contenedores.
-# - Nunca borra contenedores, volúmenes ni imágenes etiquetadas.
+# - Nunca borra contenedores, volúmenes ni imágenes utilizadas.
 
 set -euo pipefail
 
@@ -23,8 +23,59 @@ echo "===== CACHÉ SIN USO ====="
 docker builder prune --all --force
 
 echo
-echo "===== IMÁGENES HUÉRFANAS ====="
-docker image prune --force
+echo "===== IMÁGENES ANTIGUAS SIN CONTENEDORES ====="
+LIMITE="$(
+  date -d '7 days ago' +%s
+)"
+
+mapfile -t IMAGENES_USADAS < <(
+  docker ps -aq |
+    xargs -r docker inspect \
+      --format '{{.Image}}' |
+    sort -u
+)
+
+mapfile -t IMAGENES_EXISTENTES < <(
+  docker image ls \
+    --quiet \
+    --no-trunc |
+    sort -u
+)
+
+ELIMINADAS=0
+
+for IMAGEN in "${IMAGENES_EXISTENTES[@]}"; do
+  PROTEGIDA=false
+
+  for USADA in "${IMAGENES_USADAS[@]}"; do
+    if [ "$IMAGEN" = "$USADA" ]; then
+      PROTEGIDA=true
+      break
+    fi
+  done
+
+  if [ "$PROTEGIDA" = true ]; then
+    continue
+  fi
+
+  CREADA="$(
+    docker image inspect \
+      --format '{{.Created}}' \
+      "$IMAGEN"
+  )"
+
+  CREADA_EPOCH="$(
+    date -d "$CREADA" +%s
+  )"
+
+  if [ "$CREADA_EPOCH" -le "$LIMITE" ]; then
+    echo "🗑️ Eliminando imagen sin uso: $IMAGEN"
+    docker image rm --force "$IMAGEN"
+    ELIMINADAS=$((ELIMINADAS + 1))
+  fi
+done
+
+echo "Imágenes antiguas sin uso eliminadas: $ELIMINADAS"
 
 echo
 echo "===== DESPUÉS ====="
