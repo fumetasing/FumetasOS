@@ -163,7 +163,8 @@ build)
 
 backup)
 
-	exec "$BIN_DIR/fumetaos-backup"
+	shift
+	exec "$BIN_DIR/fumetaos-backup" "$@"
 	;;
 
 history)
