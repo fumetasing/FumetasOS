@@ -53,6 +53,10 @@ run_monitor \
 	/opt/fumetaos/modules/monitor/docker.sh
 
 run_monitor \
+	"🎞️ Biblioteca multimedia" \
+	/opt/fumetaos/modules/monitor/media-library.sh
+
+run_monitor \
 	"📦 Actualizaciones" \
 	/opt/fumetaos/modules/monitor/updates.sh
 

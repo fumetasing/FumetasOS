@@ -54,27 +54,27 @@ fi
 
 graduales=$((listadas - aplicables))
 
-case "$listadas" in
-0)
+if [ "$listadas" -eq 0 ]; then
 	mostrar_estado "🟢" "Sistema al día"
 	exit 0
-	;;
-[1-9] | [1-4][0-9])
-	if [ "$graduales" -gt 0 ]; then
-		mostrar_estado "🟡" \
-			"$listadas actualizaciones disponibles ($graduales en despliegue gradual)"
-	else
-		mostrar_estado "🟡" "$listadas actualizaciones aplicables"
-	fi
+fi
+
+if [ "$aplicables" -eq 0 ]; then
+	mostrar_estado "ℹ️" \
+		"$graduales actualizaciones en despliegue gradual; ninguna aplicable todavía"
+	exit 0
+fi
+
+MENSAJE="$aplicables actualizaciones aplicables"
+
+if [ "$graduales" -gt 0 ]; then
+	MENSAJE="$MENSAJE ($graduales adicionales en despliegue gradual)"
+fi
+
+if [ "$aplicables" -lt 50 ]; then
+	mostrar_estado "🟡" "$MENSAJE"
 	exit 10
-	;;
-*)
-	if [ "$graduales" -gt 0 ]; then
-		mostrar_estado "🔴" \
-			"$listadas actualizaciones disponibles ($graduales en despliegue gradual)"
-	else
-		mostrar_estado "🔴" "$listadas actualizaciones aplicables"
-	fi
-	exit 20
-	;;
-esac
+fi
+
+mostrar_estado "🔴" "$MENSAJE"
+exit 20

@@ -82,6 +82,7 @@ comprobar_silenciosamente() {
 		/opt/fumetaos/modules/monitor/docker.sh
 		/opt/fumetaos/modules/monitor/virtual-machines.sh
 		/opt/fumetaos/modules/monitor/apps.sh
+		/opt/fumetaos/modules/monitor/media-library.sh
 		/opt/fumetaos/modules/monitor/updates.sh
 	)
 
@@ -177,6 +178,10 @@ ejecutar_seccion \
 ejecutar_seccion \
 	"📦 Aplicaciones" \
 	/opt/fumetaos/modules/monitor/apps.sh
+
+ejecutar_seccion \
+	"🎞️ Biblioteca multimedia" \
+	/opt/fumetaos/modules/monitor/media-library.sh
 
 if [ "$TELEGRAM" -eq 1 ]; then
 	separator
