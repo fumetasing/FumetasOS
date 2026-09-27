@@ -52,7 +52,7 @@ comprobar_estabilidad_casaos() {
 
   if [ "$fallos" -eq 0 ]; then
     if [ "$WATCH" -eq 0 ]; then
-      echo "🟢 CasaOS: sin fallos detectados en las últimas 24 horas"
+      echo "✅ CasaOS: sin fallos detectados en las últimas 24 horas"
     fi
   else
     if [ "$WATCH" -eq 0 ]; then
