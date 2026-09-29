@@ -130,8 +130,8 @@ TOTAL_PROBLEMS=$((
 
 if [ "$TOTAL_PROBLEMS" -eq 0 ]; then
 	echo "🟢 Organización multimedia correcta"
-	echo "   Series: sin vídeos sueltos ni episodios dudosos"
 	echo "   Películas: sin episodios mal ubicados"
+	echo "   Series: sin vídeos sueltos ni episodios dudosos"
 	echo "   Archivos: legibles y con contenido"
 	exit 0
 fi
