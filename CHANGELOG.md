@@ -1,5 +1,14 @@
 # FumetaOS Changelog
 
+## v2.4.19
+
+### Fixed
+
+- Añadidos cinco reintentos antes de declarar inaccesible el USB del Mac.
+- Evitados falsos avisos rojos provocados por fallos SSH transitorios en macOS 27.0.1.
+- La comprobación realiza hasta seis intentos totales antes de afectar al estado general.
+
+
 
 # Changelog
 

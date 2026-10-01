@@ -173,20 +173,30 @@ ha_fallado() {
 }
 
 mostrar_usb() {
-	local output
-	local free
-	local used
+	local output=""
+	local free=""
+	local used=""
+	local attempt=1
+	local retries=5
+	local total_attempts=$((retries + 1))
+	local retry_delay=10
+	local last_error="No disponible o no se pudo consultar"
 
-	if ! output=$(
-		timeout 25 ssh \
-			-i /home/server/.ssh/id_ed25519_fumetaos_mac \
-			-o BatchMode=yes \
-			-o ConnectTimeout=10 \
-			-o ServerAliveInterval=5 \
-			-o ServerAliveCountMax=2 \
-			-o UserKnownHostsFile=/home/server/.ssh/known_hosts \
-			-o StrictHostKeyChecking=yes \
-			fumetasing@192.168.1.5 /bin/sh -s 2>/dev/null <<'REMOTE'
+	while [ "$attempt" -le "$total_attempts" ]; do
+		output=""
+		free=""
+		used=""
+
+		if output=$(
+			timeout 25 ssh \
+				-i /home/server/.ssh/id_ed25519_fumetaos_mac \
+				-o BatchMode=yes \
+				-o ConnectTimeout=10 \
+				-o ServerAliveInterval=5 \
+				-o ServerAliveCountMax=2 \
+				-o UserKnownHostsFile=/home/server/.ssh/known_hosts \
+				-o StrictHostKeyChecking=yes \
+				fumetasing@192.168.1.5 /bin/sh -s 2>/dev/null <<'REMOTE'
 TARGET="/Users/fumetasing/FumetaOS-Server"
 
 [ -d "$TARGET" ] || exit 20
@@ -194,25 +204,32 @@ TARGET="/Users/fumetasing/FumetaOS-Server"
 df -h "$TARGET" |
     awk 'NR == 2 { print $4 "|" $5 }'
 REMOTE
-	); then
-		echo "🔴 USB del Mac"
-		echo "   No disponible o no se pudo consultar"
-		elevar_error 20
-		return
-	fi
+		); then
+			IFS='|' read -r free used <<<"$output"
 
-	IFS='|' read -r free used <<<"$output"
+			if [[ -n "$free" && "$used" =~ ^[0-9]+%$ ]]; then
+				echo "🟢 USB del Mac"
+				echo "   Libre: $free"
+				echo "   Uso: $used"
+				return
+			fi
 
-	if [[ -z "$free" || ! "$used" =~ ^[0-9]+%$ ]]; then
-		echo "🔴 USB del Mac"
-		echo "   No se pudo interpretar el espacio disponible"
-		elevar_error 20
-		return
-	fi
+			last_error="No se pudo interpretar el espacio disponible"
+		else
+			last_error="No disponible o no se pudo consultar"
+		fi
 
-	echo "🟢 USB del Mac"
-	echo "   Libre: $free"
-	echo "   Uso: $used"
+		if [ "$attempt" -lt "$total_attempts" ]; then
+			sleep "$retry_delay"
+		fi
+
+		attempt=$((attempt + 1))
+	done
+
+	echo "🔴 USB del Mac"
+	echo "   $last_error"
+	echo "   Intentos realizados: $total_attempts"
+	elevar_error 20
 }
 
 mostrar_copia() {
