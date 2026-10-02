@@ -1,5 +1,15 @@
 # FumetaOS Changelog
 
+## v2.4.20
+
+### Fixed
+
+- Corregido el contador preventivo de borrados de las copias espejo al Mac.
+- La protección reconoce ahora las dos formas de salida utilizadas por rsync.
+- Las copias se bloquean correctamente cuando se superarían los 50 borrados.
+- Añadida una validación aislada del contador antes de publicar la corrección.
+
+
 ## v2.4.19
 
 ### Fixed

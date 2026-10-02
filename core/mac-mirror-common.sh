@@ -128,7 +128,7 @@ mac_mirror_contar_borrados() {
 		-e "$RSYNC_SSH_COMMAND" \
 		"$source_dir" \
 		"$rsync_destination" |
-		awk '$0 == "*deleting" { count++ } END { print count + 0 }'
+		awk '$1 == "*deleting" || $1 == "deleting" { count++ } END { print count + 0 }'
 }
 
 mac_mirror_copiar() {
