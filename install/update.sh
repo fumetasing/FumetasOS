@@ -12,7 +12,6 @@ FUMETAOS_TIMERS="
 fumetaos-watch.timer
 fumetaos-history.timer
 fumetaos-history-clean.timer
-fumetaos-docker-clean.timer
 fumetaos-report.timer
 fumetaos-nightly.timer
 fumetaos-timecapsule-watch.timer
@@ -198,6 +197,11 @@ actualizar() {
 
 	echo
 	echo "⏱️ Actualizando timers"
+
+	# Desde 2.4.21, Docker se limpia dentro de la cadena nocturna.
+	systemctl disable --now fumetaos-docker-clean.timer 2>/dev/null || true
+	rm -f /etc/systemd/system/fumetaos-docker-clean.timer
+	systemctl daemon-reload
 
 	for TIMER in $FUMETAOS_TIMERS; do
 		systemctl enable "$TIMER"

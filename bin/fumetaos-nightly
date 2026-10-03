@@ -16,6 +16,7 @@ print_plan() {
         'después → copia de recuperación' \
         'después → espejo general al Mac' \
         'después → actualización de Ubuntu' \
+        'después → limpieza segura de Docker' \
         'los lunes, después → verificación cifrada' \
         'el primer sábado de cada mes, al final → prueba SMART larga'
 }
@@ -118,6 +119,7 @@ run_step 'Time Capsule → Mac' fumetaos-timecapsule-mac-backup.service
 run_step 'Copia de recuperación' fumetaos-recovery-backup.service
 run_step 'Espejo general → Mac' fumetaos-mac-backup.service
 run_step 'Actualización de Ubuntu' fumetaos-system-upgrade.service
+run_step 'Limpieza segura de Docker' fumetaos-docker-clean.service
 
 if verify_due; then
     if run_step 'Verificación cifrada semanal' fumetaos-recovery-verify.service; then

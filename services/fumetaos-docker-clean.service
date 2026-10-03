@@ -1,5 +1,5 @@
 [Unit]
-Description=Limpieza semanal segura de Docker
+Description=Limpieza diaria segura de Docker
 Requires=docker.service
 After=docker.service
 

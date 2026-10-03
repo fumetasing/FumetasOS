@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Limpieza semanal segura de Docker:
+# Limpieza diaria segura de Docker:
 # - Borra caché de compilación sin uso.
 # - Borra imágenes de más de 7 días que no utiliza ningún contenedor.
 # - Docker nunca elimina imágenes usadas por contenedores.
@@ -13,7 +13,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 20
 fi
 
-echo "🐳 Limpieza semanal segura de Docker"
+echo "🐳 Limpieza diaria segura de Docker"
 echo
 echo "===== ANTES ====="
 docker system df

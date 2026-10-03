@@ -172,6 +172,53 @@ ha_fallado() {
 	[ "${BAD[$idx]:-0}" -gt "${OK[$idx]:-0}" ]
 }
 
+despertar_mac() {
+	local mac_ip="192.168.1.5"
+	local mac_fallback="f6:58:56:8e:f7:da"
+	local mac_detectada=""
+	local mac_address=""
+
+	mac_detectada=$(
+		ip neigh show "$mac_ip" |
+			awk '
+				/lladdr/ {
+					print $5
+					exit
+				}
+			'
+	)
+
+	if [[ "$mac_detectada" =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ ]]; then
+		mac_address="$mac_detectada"
+	else
+		mac_address="$mac_fallback"
+	fi
+
+	command -v python3 >/dev/null 2>&1 ||
+		return 1
+
+	python3 - "$mac_address" <<'PYTHON'
+import socket
+import sys
+import time
+
+mac = sys.argv[1].replace(":", "").replace("-", "")
+
+if len(mac) != 12:
+    raise SystemExit(20)
+
+packet = bytes.fromhex("FF" * 6 + mac * 16)
+
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    for _ in range(12):
+        sock.sendto(packet, ("255.255.255.255", 9))
+        sock.sendto(packet, ("192.168.1.255", 9))
+        time.sleep(0.5)
+PYTHON
+}
+
 mostrar_usb() {
 	local output=""
 	local free=""
@@ -180,6 +227,8 @@ mostrar_usb() {
 	local retries=5
 	local total_attempts=$((retries + 1))
 	local retry_delay=10
+	local wake_delay=15
+	local wake_status=0
 	local last_error="No disponible o no se pudo consultar"
 
 	while [ "$attempt" -le "$total_attempts" ]; do
@@ -211,6 +260,12 @@ REMOTE
 				echo "🟢 USB del Mac"
 				echo "   Libre: $free"
 				echo "   Uso: $used"
+
+				if [ "$wake_status" -eq 1 ]; then
+					echo "   Despertar por red: solicitado correctamente"
+					echo "   Intentos necesarios: $attempt"
+				fi
+
 				return
 			fi
 
@@ -220,7 +275,19 @@ REMOTE
 		fi
 
 		if [ "$attempt" -lt "$total_attempts" ]; then
-			sleep "$retry_delay"
+			if [ "$wake_status" -eq 0 ]; then
+				if despertar_mac; then
+					wake_status=1
+					last_error="Mac despertado por red; esperando SSH y el USB"
+					sleep "$wake_delay"
+				else
+					wake_status=2
+					last_error="No se pudo enviar el despertar por red"
+					sleep "$retry_delay"
+				fi
+			else
+				sleep "$retry_delay"
+			fi
 		fi
 
 		attempt=$((attempt + 1))
@@ -229,9 +296,21 @@ REMOTE
 	echo "🔴 USB del Mac"
 	echo "   $last_error"
 	echo "   Intentos realizados: $total_attempts"
+
+	case "$wake_status" in
+	1)
+		echo "   Despertar por red: enviado, pero el USB no apareció"
+		;;
+	2)
+		echo "   Despertar por red: no se pudo enviar"
+		;;
+	*)
+		echo "   Despertar por red: no fue necesario"
+		;;
+	esac
+
 	elevar_error 20
 }
-
 mostrar_copia() {
 	local idx="$1"
 	local unit="${UNITS[$1]}"
