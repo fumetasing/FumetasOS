@@ -99,9 +99,9 @@ ejecutar_rsync_con_reintentos() {
 			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
 			"${RSYNC_FILTER_OPTIONS[@]}"; then
 			return 0
+		else
+			status="$?"
 		fi
-
-		status="$?"
 
 		if [ "$attempt" -lt "$MAX_RETRIES" ]; then
 			echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de datos. Reintentando en $RETRY_DELAY segundos..."
