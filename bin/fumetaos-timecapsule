@@ -62,7 +62,7 @@ mostrar_estado() {
 	echo "   Recurso: $SMB_SHARE"
 	echo "   Protocolo: SMB $SMB_VERSION"
 	echo "   Punto interno: $MOUNTPOINT"
-	echo "   Punto casaOS: /DATA/TimeCapsule"
+	echo "   Punto CasaOS: /DATA/TimeCapsule"
 
 	if cliente_instalado; then
 		echo "✅ Cliente SMB instalado"

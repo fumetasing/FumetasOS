@@ -45,7 +45,7 @@ validar_lectura() {
 	fi
 
 	if ! esta_publicado; then
-		echo "❌ SMB no está publicado para casaOS"
+		echo "❌ SMB no está publicado para CasaOS"
 		return 1
 	fi
 

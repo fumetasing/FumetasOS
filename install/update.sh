@@ -169,6 +169,14 @@ actualizar() {
 	echo "🔄 Recargando systemd"
 	systemctl daemon-reload
 
+	# Recuperación exclusiva de Jellyfin tras montajes tardíos al arrancar.
+	if [ -f "$BASE/bin/fumetaos-jellyfin-mount-guard" ] &&
+		systemctl cat fumetaos-jellyfin-mount-guard.service >/dev/null 2>&1; then
+		echo "🛠️ Activando recuperación de montajes de Jellyfin"
+		systemctl enable fumetaos-jellyfin-mount-guard.service || exit 20
+		systemctl start --no-block fumetaos-jellyfin-mount-guard.service || exit 20
+	fi
+
 	if systemctl cat fumetaos-docker-firewall.service >/dev/null 2>&1; then
 		echo "🔒 Activando protección Docker"
 		systemctl enable --now fumetaos-docker-firewall.service

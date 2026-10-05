@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Reiniciar solo Jellyfin si se demuestra que sus bind mounts están desactualizados."""
+import json
+import os
+import socket
+import subprocess
+import sys
+import time
+import urllib.request
+
+D=['docker','--host','unix:///var/run/docker.sock']
+ENV=dict(os.environ,LC_ALL='C',PATH='/usr/sbin:/usr/bin:/sbin:/bin')
+
+def say(s):
+    print(s,flush=True)
+
+def require(ok,message):
+    if not ok:
+        raise RuntimeError(message)
+
+def call(args,timeout=15):
+    return subprocess.run(args,stdin=subprocess.DEVNULL,capture_output=True,
+                          text=True,env=ENV,timeout=timeout)
+
+def query(args,timeout=15):
+    result=call(args,timeout)
+    require(result.returncode==0,'Consulta incompleta; no continuar con cambios.')
+    return result.stdout
+
+def inspect():
+    return json.loads(query(D+['inspect','jellyfin']))[0]
+
+def identity(path,container=False):
+    args=['stat','-L','-c','%d:%i','--',path]
+    result=call(D+['exec','jellyfin']+args if container else args)
+    require(result.returncode==0,'No se pudo identificar una carpeta; no se reinicia.')
+    return result.stdout.strip()
+
+
+class Waiting(Exception):
+    pass
+
+EXPECTED={'/Media':'/mnt/datos/Multimedia','/TimeCapsule':'/DATA/TimeCapsule'}
+
+def check_paths():
+    before=inspect()
+    mounts={m['Destination']:m for m in before['Mounts']}
+    for dest,src in EXPECTED.items():
+        require(dest in mounts and mounts[dest]['Source']==src and
+                mounts[dest]['Type']=='bind','Montajes diferentes de los auditados; revisión manual.')
+    for root,kind in [('/mnt/datos','ext4'),('/DATA/TimeCapsule','cifs')]:
+        result=call(['findmnt','-J','-T',root,'-o','TARGET,SOURCE,FSTYPE'])
+        if result.returncode:
+            raise Waiting('Montaje aún no disponible: '+root)
+        rows=json.loads(result.stdout)['filesystems']
+        if len(rows)!=1 or rows[0]['target']!=root or rows[0]['fstype']!=kind:
+            raise Waiting('Montaje aún no disponible: '+root)
+        if kind=='cifs':
+            require(rows[0]['source']=='//192.168.1.2/Data','Origen CIFS inesperado; revisión manual.')
+    for folder in ['/mnt/datos/Multimedia/Series','/DATA/TimeCapsule/Multimedia/Peliculas']:
+        if call(['sudo','-u','server','test','-r',folder]).returncode or call(['sudo','-u','server','test','-x',folder]).returncode:
+            raise Waiting('Biblioteca aún no accesible: '+folder)
+    return before
+
+def main():
+    import pathlib
+    import fcntl
+    require(os.geteuid()==0,'Ejecutar como root.')
+    check_only=sys.argv[1:]==['--check-only']
+    require(check_only or not sys.argv[1:],'Argumento no reconocido.')
+    fd=os.open('/run/fumetaos-jellyfin-mount-guard.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
+    fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+    if not check_only:
+        attempt=pathlib.Path('/run/fumetaos-jellyfin-mount-guard.attempts')
+        count=int(attempt.read_text())+1 if attempt.exists() else 1
+        require(count<=40,'Agotados 40 intentos de arranque; revisión manual, sin reinicio repetido.')
+        attempt.write_text(str(count))
+    docker_state=call(['systemctl','is-active','--quiet','docker.service'])
+    if docker_state.returncode:
+        say('Docker no activo: no se inicia ni modifica nada.')
+        return 0
+    names=query(D+['ps','-a','--format','{{.Names}}']).splitlines()
+    if 'jellyfin' not in names:
+        say('Jellyfin no instalado: no se inicia ni modifica nada.')
+        return 0
+    before=inspect()
+    if not before['State'].get('Running'):
+        say('Jellyfin parado: se respeta su estado, no se inicia.')
+        return 0
+    before=check_paths()
+    stale=any(identity(src)!=identity(dest,True) for dest,src in EXPECTED.items())
+    if not stale:
+        say('Jellyfin ya ve los montajes correctos. Sin reinicio.')
+        return 0
+    require(not check_only,'Montajes desactualizados; no se instala mientras Jellyfin requiera recuperación.')
+    marker=pathlib.Path('/run/fumetaos-jellyfin-mount-guard.restarted')
+    require(not marker.exists(),'Ya se intentó un reinicio en este arranque; revisión manual.')
+    activity=query(['systemctl','show','fumetaos-nightly.service','-p','ActiveState','--value']).strip()
+    if activity in ('active','activating','deactivating'):
+        raise Waiting('Cadena nocturna activa; no interrumpirla.')
+    require(inspect()['Id']==before['Id'],'Jellyfin cambió durante la comprobación.')
+    # Reevaluar los destinos inmediatamente antes del único reinicio permitido.
+    check_paths()
+    mfd=os.open(str(marker),os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600)
+    with os.fdopen(mfd,'w') as stream:
+        stream.write(before['Id'])
+    say('Montaje desactualizado confirmado; reiniciando únicamente Jellyfin.')
+    query(D+['restart','--time','20','jellyfin'],timeout=100)
+    after=inspect()
+    require(all(after[k]==before[k] for k in ('Id','Image','Config','HostConfig','Mounts')) and
+            after['State'].get('Running'),'Estado inesperado tras recuperar Jellyfin.')
+    require(all(identity(src)==identity(dest,True) for dest,src in EXPECTED.items()),
+            'No se recuperaron los montajes; no se repetirá el reinicio.')
+    for folder in ['/Media/Series','/TimeCapsule/Multimedia/Peliculas']:
+        require(call(D+['exec','--user','1000:1000','jellyfin','test','-r',folder]).returncode==0 and
+                call(D+['exec','--user','1000:1000','jellyfin','test','-x',folder]).returncode==0,
+                'Biblioteca aún inaccesible; revisión manual.')
+    say('Montajes recuperados; mismo contenedor y configuración.')
+    return 0
+
+if __name__=='__main__':
+    try:
+        sys.exit(main())
+    except Waiting as error:
+        say('Esperando: '+str(error))
+        sys.exit(75)
+    except Exception as error:
+        say('Revisión necesaria: '+(str(error) if isinstance(error,RuntimeError) else type(error).__name__))
+        sys.exit(20)

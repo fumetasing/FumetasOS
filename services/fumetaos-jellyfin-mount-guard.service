@@ -1,0 +1,19 @@
+[Unit]
+Description=Recuperar montajes antiguos de Jellyfin al arrancar
+After=docker.service mnt-datos.mount fumetaos-timecapsule.service fumetaos-timecapsule-casaos.service
+Wants=mnt-datos.mount fumetaos-timecapsule.service fumetaos-timecapsule-casaos.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+ExecStart=/usr/bin/python3 /opt/fumetaos/bin/fumetaos-jellyfin-mount-guard
+Restart=on-failure
+RestartPreventExitStatus=20
+RestartSec=30s
+TimeoutStartSec=180s
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
