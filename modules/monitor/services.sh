@@ -34,9 +34,9 @@ comprobar_estabilidad_casaos() {
 
   if ! registros="$(registros_casaos 2>/dev/null)"; then
     if [ "$WATCH" -eq 0 ]; then
-      echo "🟡 CasaOS: no se pudo revisar su estabilidad"
+      echo "🟡 casaOS: no se pudo revisar su estabilidad"
     else
-      echo "No se pudo revisar la estabilidad de CasaOS"
+      echo "No se pudo revisar la estabilidad de casaOS"
     fi
 
     elevar_error 10
@@ -52,13 +52,13 @@ comprobar_estabilidad_casaos() {
 
   if [ "$fallos" -eq 0 ]; then
     if [ "$WATCH" -eq 0 ]; then
-      echo "✅ CasaOS: sin fallos detectados en las últimas 24 horas"
+      echo "✅ casaOS: sin fallos detectados en las últimas 24 horas"
     fi
   else
     if [ "$WATCH" -eq 0 ]; then
-      echo "🟡 CasaOS: $fallos fallos detectados en las últimas 24 horas"
+      echo "🟡 casaOS: $fallos fallos detectados en las últimas 24 horas"
     else
-      echo "CasaOS: $fallos fallos detectados en las últimas 24 horas"
+      echo "casaOS: $fallos fallos detectados en las últimas 24 horas"
     fi
 
     elevar_error 10

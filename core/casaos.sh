@@ -61,7 +61,7 @@ container: $APP_CONTAINER
 EOF
 
 	echo
-	echo "✅ Metadata CasaOS generada"
+	echo "✅ Metadata casaOS generada"
 	echo
 	echo "$DIR/app.yaml"
 
@@ -83,7 +83,7 @@ casaos_show() {
 
 	else
 
-		echo "❌ Metadata CasaOS no encontrada"
+		echo "❌ Metadata casaOS no encontrada"
 
 	fi
 

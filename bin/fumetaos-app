@@ -32,7 +32,7 @@ ayuda_app() {
 	echo
 
 	echo "fumetaos app metadata <app>"
-	echo "   Generar metadata CasaOS"
+	echo "   Generar metadata casaOS"
 
 	echo
 

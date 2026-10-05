@@ -34,18 +34,18 @@ elif [ "$(findmnt -rn -M "$TIMECAPSULE_MOUNT" -o FSTYPE 2>/dev/null)" != "cifs" 
 
 elif ! systemctl is-active --quiet fumetaos-timecapsule-casaos.service; then
 
-	echo "🔴 Servicio de Time Capsule para CasaOS no activo"
+	echo "🔴 Servicio de Time Capsule para casaOS no activo"
 	ERROR=20
 
 elif ! findmnt -rn -M "$CASAOS_MOUNT" >/dev/null 2>&1; then
 
-	echo "🔴 Time Capsule no disponible en CasaOS"
+	echo "🔴 Time Capsule no disponible en casaOS"
 	echo "   Punto esperado: $CASAOS_MOUNT"
 	ERROR=20
 
 elif ! ls "$CASAOS_MOUNT" >/dev/null 2>&1; then
 
-	echo "🔴 Time Capsule montada pero sin acceso desde CasaOS"
+	echo "🔴 Time Capsule montada pero sin acceso desde casaOS"
 	echo "   Punto: $CASAOS_MOUNT"
 	ERROR=20
 
@@ -75,7 +75,7 @@ else
 	fi
 
 	echo "   SMB: $TIMECAPSULE_MOUNT"
-	echo "   CasaOS: $CASAOS_MOUNT"
+	echo "   casaOS: $CASAOS_MOUNT"
 	echo "   Protocolo: SMB 3.1.1"
 	echo "   Acceso: disponible"
 	echo "   Libre: $LIBRE"

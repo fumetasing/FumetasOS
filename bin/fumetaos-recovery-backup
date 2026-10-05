@@ -75,7 +75,7 @@ limpiar() {
 }
 
 interrumpir() {
-	echo "⚠️ Copia interrumpida; restaurando CasaOS, aplicaciones y máquinas virtuales"
+	echo "⚠️ Copia interrumpida; restaurando casaOS, aplicaciones y máquinas virtuales"
 	limpiar
 	exit 143
 }
@@ -295,7 +295,7 @@ crear_backup() {
 	detectar_discos_vm
 	parar_maquinas_virtuales
 
-	echo "⏸️ Deteniendo temporalmente CasaOS y las aplicaciones"
+	echo "⏸️ Deteniendo temporalmente casaOS y las aplicaciones"
 	parar_servicios
 
 	crear_archivos_vm
