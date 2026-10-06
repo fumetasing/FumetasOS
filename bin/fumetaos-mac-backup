@@ -10,8 +10,8 @@ MAC_DESTINATION="$MAC_ROOT"
 MAC_USB_MOUNT="/Volumes/Data USB"
 
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
-DELETE_LIMIT=125
-# FUMETAOS_MAX_DELETE_125_V1
+DELETE_LIMIT=50
+# FUMETAOS_DAILY_DELETE_50_PS4_V1
 MAX_RETRIES=3
 RETRY_DELAY=60
 
@@ -61,8 +61,8 @@ manejar_error() {
 			echo "ℹ️ Simulación: se superaría el cupo de borrados; no se ha cambiado nada."
 			exit 25
 		fi
-		echo "⚠️ Espejo parcial: se alcanzó el cupo de borrados. Pendientes para la siguiente ejecución."
-		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo al Mac pendiente. Cupo de 125 borrados alcanzado; continúa en la siguiente copia. No se da por completa esta ejecución." || true
+		echo "⚠️ Espejo parcial: se alcanzó el cupo de borrados. Pendientes para el próximo día con cupo disponible."
+		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo al Mac pendiente. Cupo diario de 50 borrados fuera de PS4 & PS5 alcanzado; continúa con el cupo del próximo día. No se da por completa esta ejecución." || true
 		exit 25
 	fi
 
@@ -75,30 +75,100 @@ manejar_error() {
 }
 
 comprobar_borrados_previstos() {
-	local deletes
-	deletes="$(mac_mirror_contar_borrados \
-		"$SOURCE_DIR" \
-		"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
-		"${RSYNC_FILTER_OPTIONS[@]}")"
-	if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
-		echo "⚠️ Borrados previstos: $deletes. Se permiten hasta $DELETE_LIMIT; el resto quedará para otra ejecución."
-	fi
+	echo "ℹ️ Se aplicará el cupo persistente de 50 borrados diarios fuera de PS4 & PS5."
+}
+
+fumetaos_cupo_diario() {
+	python3 - "$1" "$2" <<'FUMETAOS_CONTADOR'
+import datetime
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+import tempfile
+
+folder = Path('/var/lib/fumetaos-mac-delete-budget')
+if sys.argv[2] == 'reserve':
+    folder.mkdir(mode=0o700, exist_ok=True)
+if folder.exists() or folder.is_symlink():
+    info = folder.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or stat.S_IMODE(info.st_mode) != 0o700:
+        raise RuntimeError('Directorio del contador inseguro; no se autorizan borrados.')
+path = folder / 'contador.json'
+today = datetime.date.today().isoformat()
+state = {'day': today, 'used': 0}
+if path.exists() or path.is_symlink():
+    info = path.lstat()
+    if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or stat.S_IMODE(info.st_mode) != 0o600:
+        raise RuntimeError('Archivo del contador inseguro.')
+    state = json.loads(path.read_text())
+    if (set(state) != {'day', 'used'} or type(state['used']) is not int
+            or not 0 <= state['used'] <= 50
+            or datetime.date.fromisoformat(state['day']).isoformat() != state['day']):
+        raise RuntimeError('Contador no válido; no se reinicia automáticamente.')
+    if state['day'] > today:
+        raise RuntimeError('El reloj ha retrocedido; no se renueva el cupo.')
+    if state['day'] < today:
+        state = {'day': today, 'used': 0}
+requested = int(sys.argv[1])
+if requested < 0:
+    raise RuntimeError('Número previsto no válido.')
+quota = min(requested, 50 - state['used'])
+if sys.argv[2] == 'reserve':
+    # Reservar ANTES de rsync: una interrupción/reinicio no concede otro cupo.
+    state['used'] += quota
+    fd, name = tempfile.mkstemp(prefix='.contador-', dir=folder)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(state, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, path)
+        directory = os.open(folder, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+elif sys.argv[2] != 'inspect':
+    raise RuntimeError('Operación del contador no válida.')
+print(quota)
+FUMETAOS_CONTADOR
 }
 
 ejecutar_rsync_con_reintentos() {
-	# Una sola transferencia: repetir después de un error reiniciaría el cupo.
-	CURRENT_STEP="Validación del USB antes de la transferencia limitada"
-	mac_mirror_usb_disponible ||
-		mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
-	CURRENT_STEP="Copia espejo de /mnt/datos, máximo 125 borrados"
-	if mac_mirror_copiar \
-		"$SOURCE_DIR" \
-		"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
-		"${RSYNC_FILTER_OPTIONS[@]}" \
-		"--max-delete=$DELETE_LIMIT"; then
-		return 0
+	local status=0 deletes quota mode
+	local otros=("${RSYNC_FILTER_OPTIONS[@]}" --exclude='/PS4 & PS5/' --filter='P /PS4 & PS5/***')
+	CURRENT_STEP="Validación del USB y de PS4 & PS5"
+	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
+	[ -d "${SOURCE_DIR%/}/PS4 & PS5" ] && [ ! -L "${SOURCE_DIR%/}/PS4 & PS5" ] ||
+		mostrar_error "La carpeta original PS4 & PS5 no es un directorio real; no se copia ni borra nada"
+	CURRENT_STEP="Contar borrados fuera de PS4 & PS5"
+	deletes="$(mac_mirror_contar_borrados "$SOURCE_DIR" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" "${otros[@]}")" || return "$?"
+	case "$deletes" in ''|*[!0-9]*) mostrar_error "No se pudo contar los borrados" ;; esac
+	mode=reserve
+	[ "${#DRY_RUN[@]}" -eq 0 ] || mode=inspect
+	quota="$(fumetaos_cupo_diario "$deletes" "$mode")" || return "$?"
+	case "$quota" in ''|*[!0-9]*) mostrar_error "Cupo no válido" ;; esac
+	echo "🛡️ Cupo disponible para esta transferencia: $quota. Máximo diario: 50; PS4 & PS5 exenta."
+	# Una sola transferencia por grupo, nunca reintentar borrados automáticamente.
+	CURRENT_STEP="Copia de PS4 & PS5 sin límite de borrados"
+	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
+	if mac_mirror_copiar "${SOURCE_DIR%/}/PS4 & PS5/" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/PS4 & PS5/"; then
+		:
 	else
 		return "$?"
+	fi
+	CURRENT_STEP="Copia del resto del espejo, cupo diario de borrados"
+	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
+	if mac_mirror_copiar "$SOURCE_DIR" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" "${otros[@]}" "--max-delete=$quota"; then
+		return 0
+	else
+		status="$?"
+		return "$status"
 	fi
 }
 
@@ -108,7 +178,7 @@ case "${1:-}" in
 	DRY_RUN=(--dry-run)
 	;;
 --allow-large-delete)
-	echo "ℹ️ --allow-large-delete ya no elimina el máximo de 125 borrados."
+	echo "ℹ️ --allow-large-delete no elimina el máximo diario de 50 fuera de PS4 & PS5."
 	ALLOW_LARGE_DELETE=0
 	;;
 *)
@@ -146,8 +216,8 @@ trap manejar_error ERR
 
 echo "💾 Copia espejo de /mnt/datos al Mac"
 echo "📍 Destino: $MAC_DESTINATION"
-echo "🛡️ Límite automático de borrados: $DELETE_LIMIT"
-echo "ℹ️ Una transferencia por ejecución; sin reintentos que puedan duplicar el cupo."
+echo "🛡️ Límite diario fuera de PS4 & PS5: $DELETE_LIMIT"
+echo "ℹ️ Dos grupos: PS4 & PS5 exenta y resto limitado; sin reintentos automáticos."
 echo
 
 CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
