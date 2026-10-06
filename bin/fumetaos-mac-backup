@@ -10,7 +10,8 @@ MAC_DESTINATION="$MAC_ROOT"
 MAC_USB_MOUNT="/Volumes/Data USB"
 
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
-DELETE_LIMIT=50
+DELETE_LIMIT=125
+# FUMETAOS_MAX_DELETE_125_V1
 MAX_RETRIES=3
 RETRY_DELAY=60
 
@@ -55,6 +56,16 @@ manejar_error() {
 
 	trap - ERR
 
+	if [ "$status" -eq 25 ]; then
+		if [ "${#DRY_RUN[@]}" -gt 0 ]; then
+			echo "ℹ️ Simulación: se superaría el cupo de borrados; no se ha cambiado nada."
+			exit 25
+		fi
+		echo "⚠️ Espejo parcial: se alcanzó el cupo de borrados. Pendientes para la siguiente ejecución."
+		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo al Mac pendiente. Cupo de 125 borrados alcanzado; continúa en la siguiente copia. No se da por completa esta ejecución." || true
+		exit 25
+	fi
+
 	echo
 	echo "🔴 La copia de datos al Mac ha fallado en: $CURRENT_STEP"
 
@@ -65,53 +76,30 @@ manejar_error() {
 
 comprobar_borrados_previstos() {
 	local deletes
-
-	deletes="$(
-		mac_mirror_contar_borrados \
-			"$SOURCE_DIR" \
-			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
-			"${RSYNC_FILTER_OPTIONS[@]}"
-	)"
-
+	deletes="$(mac_mirror_contar_borrados \
+		"$SOURCE_DIR" \
+		"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
+		"${RSYNC_FILTER_OPTIONS[@]}")"
 	if [ "$deletes" -gt "$DELETE_LIMIT" ]; then
-		echo "❌ Se cancelarían $deletes borrados; límite: $DELETE_LIMIT"
-		echo "ℹ️ Revisa el origen y el destino antes de usar --allow-large-delete"
-		exit 20
+		echo "⚠️ Borrados previstos: $deletes. Se permiten hasta $DELETE_LIMIT; el resto quedará para otra ejecución."
 	fi
 }
 
 ejecutar_rsync_con_reintentos() {
-	local attempt=1
-	local status=20
-
-	while [ "$attempt" -le "$MAX_RETRIES" ]; do
-		CURRENT_STEP="Validación del USB antes del intento $attempt de datos"
-
-		mac_mirror_usb_disponible ||
-			mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
-
-		CURRENT_STEP="Copia espejo de /mnt/datos"
-
-		echo "🔄 Intento $attempt/$MAX_RETRIES: datos"
-
-		if mac_mirror_copiar \
-			"$SOURCE_DIR" \
-			"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
-			"${RSYNC_FILTER_OPTIONS[@]}"; then
-			return 0
-		else
-			status="$?"
-		fi
-
-		if [ "$attempt" -lt "$MAX_RETRIES" ]; then
-			echo "⚠️ Falló el intento $attempt/$MAX_RETRIES de datos. Reintentando en $RETRY_DELAY segundos..."
-			sleep "$RETRY_DELAY"
-		fi
-
-		attempt=$((attempt + 1))
-	done
-
-	return "$status"
+	# Una sola transferencia: repetir después de un error reiniciaría el cupo.
+	CURRENT_STEP="Validación del USB antes de la transferencia limitada"
+	mac_mirror_usb_disponible ||
+		mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+	CURRENT_STEP="Copia espejo de /mnt/datos, máximo 125 borrados"
+	if mac_mirror_copiar \
+		"$SOURCE_DIR" \
+		"$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" \
+		"${RSYNC_FILTER_OPTIONS[@]}" \
+		"--max-delete=$DELETE_LIMIT"; then
+		return 0
+	else
+		return "$?"
+	fi
 }
 
 case "${1:-}" in
@@ -120,7 +108,8 @@ case "${1:-}" in
 	DRY_RUN=(--dry-run)
 	;;
 --allow-large-delete)
-	ALLOW_LARGE_DELETE=1
+	echo "ℹ️ --allow-large-delete ya no elimina el máximo de 125 borrados."
+	ALLOW_LARGE_DELETE=0
 	;;
 *)
 	echo "Uso:"
@@ -158,7 +147,7 @@ trap manejar_error ERR
 echo "💾 Copia espejo de /mnt/datos al Mac"
 echo "📍 Destino: $MAC_DESTINATION"
 echo "🛡️ Límite automático de borrados: $DELETE_LIMIT"
-echo "🔄 Reintentos: $MAX_RETRIES"
+echo "ℹ️ Una transferencia por ejecución; sin reintentos que puedan duplicar el cupo."
 echo
 
 CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
