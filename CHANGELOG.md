@@ -1,5 +1,17 @@
 # FumetaOS Changelog
 
+## v2.4.26
+
+### Fixed
+
+- Time Capsule → Mac mantiene una sesión SSH persistente y una protección temporal contra reposo durante la copia.
+- Las cuatro carpetas de destino se comprueban en una sola sesión, con reintentos limitados para fallos SSH de transporte.
+- Los errores de conexión ya no se anuncian como carpetas inexistentes.
+- La sesión temporal se cierra al finalizar o interrumpir la ejecución.
+- Sin cambios de horarios ni límites: Time Capsule conserva 20 borrados por carpeta; el espejo general, 50 diarios con PS4 & PS5 exenta.
+
+Validado mediante pruebas aisladas y simulaciones en el servidor, sin transferir ni borrar datos. Pendiente de comprobar una copia nocturna prolongada; no se certifica el despertar inicial de un Mac dormido.
+
 ## v2.4.20
 
 ### Fixed

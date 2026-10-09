@@ -111,7 +111,7 @@ REMOTE
 		}
 	)"
 
-	"${SSH_COMMAND[@]}" \
+	mac_mirror_ssh_comprobar \
 		"$MAC_USER@$MAC_HOST" \
 		/bin/sh -s <<<"$remote_script"
 }
@@ -144,4 +144,90 @@ mac_mirror_copiar() {
 		-e "$RSYNC_SSH_COMMAND" \
 		"$source_dir" \
 		"$rsync_destination"
+}
+
+# La sesión solo se activa explícitamente en la copia Time Capsule -> Mac.
+mac_mirror_cerrar_sesion() {
+	if [ "${MAC_SESSION_FD_OPEN:-0}" -eq 1 ]; then
+		exec 8>&-
+		MAC_SESSION_FD_OPEN=0
+	fi
+	if [ -n "${MAC_SESSION_PID:-}" ]; then
+		if kill -0 "$MAC_SESSION_PID" 2>/dev/null; then
+			kill "$MAC_SESSION_PID" 2>/dev/null || true
+		fi
+		wait "$MAC_SESSION_PID" 2>/dev/null || true
+		MAC_SESSION_PID=""
+	fi
+	# Solo el directorio privado que creó esta ejecución; nunca datos del Mac.
+	if [ -n "${MAC_SESSION_DIR:-}" ] && [ -d "$MAC_SESSION_DIR" ]; then
+		rm -f -- "$MAC_SESSION_DIR/entrada" "$MAC_SESSION_DIR/listo" \
+			"$MAC_SESSION_DIR/error" "$MAC_SESSION_DIR/control"
+		rmdir -- "$MAC_SESSION_DIR" 2>/dev/null || true
+		MAC_SESSION_DIR=""
+	fi
+}
+
+mac_mirror_abrir_sesion() {
+	local attempt=1 tick remote_command
+	local base_ssh=("${SSH_COMMAND[@]}")
+	remote_command="/usr/bin/caffeinate -i -s /bin/sh -c 'printf \"FUMETAOS_MAC_DESPIERTO\\n\"; exec /bin/cat >/dev/null'"
+	while [ "$attempt" -le 3 ]; do
+		MAC_SESSION_DIR="$(mktemp -d /run/fumetaos-mac-session.XXXXXXXX)" || return 20
+		chmod 700 "$MAC_SESSION_DIR"
+		mkfifo -m 600 "$MAC_SESSION_DIR/entrada"
+		exec 8<>"$MAC_SESSION_DIR/entrada"
+		MAC_SESSION_FD_OPEN=1
+		SSH_COMMAND=("${base_ssh[@]}" -o "ControlPath=$MAC_SESSION_DIR/control")
+		(
+			exec 8>&-
+			exec "${SSH_COMMAND[@]}" -T -o ControlMaster=yes -o ControlPersist=no \
+				"$MAC_USER@$MAC_HOST" "$remote_command" <"$MAC_SESSION_DIR/entrada"
+		) >"$MAC_SESSION_DIR/listo" 2>"$MAC_SESSION_DIR/error" &
+		MAC_SESSION_PID=$!
+		tick=0
+		while [ "$tick" -lt 45 ]; do
+			if grep -qx 'FUMETAOS_MAC_DESPIERTO' "$MAC_SESSION_DIR/listo" &&
+				[ -S "$MAC_SESSION_DIR/control" ] && kill -0 "$MAC_SESSION_PID" 2>/dev/null; then
+				printf -v RSYNC_SSH_COMMAND '%q ' "${SSH_COMMAND[@]}"
+				RSYNC_SSH_COMMAND="${RSYNC_SSH_COMMAND% }"
+				echo "✅ Sesión SSH persistente y protección temporal contra reposo iniciadas."
+				return 0
+			fi
+			kill -0 "$MAC_SESSION_PID" 2>/dev/null || break
+			sleep 1
+			tick=$((tick + 1))
+		done
+		mac_mirror_cerrar_sesion
+		SSH_COMMAND=("${base_ssh[@]}")
+		if [ "$attempt" -lt 3 ]; then
+			echo "⚠️ El Mac no confirmó la sesión; nuevo intento en 15 segundos."
+			sleep 15
+		fi
+		attempt=$((attempt + 1))
+	done
+	echo "❌ No se pudo establecer la sesión protegida con el Mac; no se inicia la copia."
+	return 255
+}
+
+mac_mirror_ssh_comprobar() {
+	local attempt=1 status=0 maximum="${MAC_SSH_CHECK_RETRIES:-1}"
+	while [ "$attempt" -le "$maximum" ]; do
+		if [ -n "${MAC_SESSION_PID:-}" ] && ! kill -0 "$MAC_SESSION_PID" 2>/dev/null; then
+			echo "❌ Se perdió la sesión que mantiene despierto el Mac." >&2
+			return 255
+		fi
+		if "${SSH_COMMAND[@]}" "$@"; then
+			return 0
+		else
+			status=$?
+		fi
+		# Nunca tratar un error remoto de disco/carpeta como un error de red.
+		[ "$status" -eq 255 ] || return "$status"
+		[ "$attempt" -lt "$maximum" ] || return "$status"
+		echo "⚠️ Falló la conexión SSH de comprobación; reintento en 15 segundos." >&2
+		sleep 15
+		attempt=$((attempt + 1))
+	done
+	return "$status"
 }

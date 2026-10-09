@@ -83,21 +83,28 @@ REMOTE
 		}
 	)"
 
-	"${SSH_COMMAND[@]}" \
+	mac_mirror_ssh_comprobar \
 		"$MAC_USER@$MAC_HOST" \
 		/bin/sh -s <<<"$remote_script" ||
 		mostrar_error "No se pudieron preparar los destinos en el Mac"
 }
 
 validar_destinos_mac() {
-	local folder
-
-	for folder in "${FOLDERS[@]}"; do
-		"${SSH_COMMAND[@]}" \
-			"$MAC_USER@$MAC_HOST" \
-			"test -d '$MAC_DESTINATION/$folder'" ||
-			mostrar_error "No existe el destino en el Mac: $MAC_DESTINATION/$folder"
-	done
+	local folder remote_script status
+	remote_script="$(
+		for folder in "${FOLDERS[@]}"; do
+			printf 'test -d %q || exit 20\n' "$MAC_DESTINATION/$folder"
+		done
+	)"
+	if mac_mirror_ssh_comprobar "$MAC_USER@$MAC_HOST" /bin/bash -s <<<"$remote_script"; then
+		return 0
+	else
+		status=$?
+	fi
+	if [ "$status" -eq 255 ]; then
+		mostrar_error "No se pudo comprobar el destino por SSH; no se afirma que falten carpetas"
+	fi
+	mostrar_error "Falló la comprobación remota de las carpetas del destino (código $status)"
 }
 
 comprobar_borrados_previstos() {
@@ -196,6 +203,10 @@ flock -n 9 ||
 	mostrar_error "Ya hay una copia al Mac en curso"
 
 mac_mirror_crear_ssh_command
+MAC_SSH_CHECK_RETRIES=3
+trap mac_mirror_cerrar_sesion EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 trap manejar_error ERR
 
@@ -206,6 +217,9 @@ echo "💾 Time Capsule validada"
 echo "🛡️ Límite automático de borrados: $DELETE_LIMIT por carpeta"
 echo "🔄 Reintentos por carpeta: $MAX_RETRIES"
 echo
+
+CURRENT_STEP="Sesión persistente y protección temporal contra reposo"
+mac_mirror_abrir_sesion
 
 CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
 
