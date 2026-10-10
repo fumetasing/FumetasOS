@@ -1,5 +1,16 @@
 # FumetaOS Changelog
 
+## v2.4.27
+
+### Added
+
+- FileZilla aparece en el apartado Actualizaciones del informe, junto a Jellyfin y Transmission.
+- La comprobación consulta el digest de la imagen LinuxServer publicada en Docker Hub y muestra la compilación instalada completa.
+- Se distinguen los estados al día, actualización disponible y consulta no completada, sin descargar imágenes ni actualizar contenedores.
+- La integración se incluye en el paquete de instalación y actualización mediante los directorios bin y modules existentes.
+
+Validado con ocho pruebas aisladas y una consulta real: FileZilla 3.69.6-1-ls38 al día. Sin cambios de horarios, límites de borrado ni reinicios al publicar. La configuración privada de FileZilla no se publica.
+
 ## v2.4.26
 
 ### Fixed

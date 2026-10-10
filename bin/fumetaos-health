@@ -197,6 +197,8 @@ registrar_resultado "$?"
 registrar_resultado "$?"
 /opt/fumetaos/modules/monitor/transmission-update.sh
 registrar_resultado "$?"
+/opt/fumetaos/modules/monitor/filezilla-update.sh
+registrar_resultado "$?"
 
 if [ -f /var/run/reboot-required ]; then
 	/opt/fumetaos/modules/monitor/reboot.sh
