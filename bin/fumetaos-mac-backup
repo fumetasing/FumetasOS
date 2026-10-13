@@ -220,12 +220,21 @@ echo "🛡️ Límite diario fuera de PS4 & PS5: $DELETE_LIMIT"
 echo "ℹ️ Dos grupos: PS4 & PS5 exenta y resto limitado; sin reintentos automáticos."
 echo
 
+# FUMETAOS_GENERAL_MAC_SESSION_V1
+MAC_SSH_CHECK_RETRIES=3
+trap mac_mirror_cerrar_sesion EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+CURRENT_STEP="Sesión SSH protegida con el Mac"
+mac_mirror_abrir_sesion ||
+	mostrar_error "No se pudo establecer la sesión protegida con el Mac; no se inicia la copia"
+
 CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
 
 mac_mirror_usb_disponible ||
 	mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
 
-"${SSH_COMMAND[@]}" \
+mac_mirror_ssh_comprobar \
 	"$MAC_USER@$MAC_HOST" \
 	"test -d '$MAC_DESTINATION'" ||
 	mostrar_error "El Mac o el disco USB no están disponibles"

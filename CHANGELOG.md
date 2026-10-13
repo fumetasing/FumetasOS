@@ -1,5 +1,16 @@
 # FumetaOS Changelog
 
+## v2.4.28
+
+### Fixed
+
+- El espejo general al Mac mantiene una sesión SSH persistente con protección temporal contra reposo, igual que la copia Time Capsule → Mac.
+- La sesión se cierra al terminar, fallar o recibir INT/TERM; si no se establece, no comienza la copia.
+- Las comprobaciones de conexión utilizan la sesión compartida y reintentos limitados para errores SSH de transporte.
+- Se mantienen el cupo persistente de 50 borrados diarios, la excepción PS4 & PS5 y la ausencia de reintentos automáticos de transferencias.
+
+Validado con pruebas aisladas de cierre y fallo de sesión, sintaxis Bash/Python y una simulación programada en el servidor el 13/10/2026, terminada con código 0. Pendiente validar una transferencia prolongada y la siguiente copia nocturna. Sin cambios de horarios ni ajustes de energía del Mac.
+
 ## v2.4.27
 
 ### Added
