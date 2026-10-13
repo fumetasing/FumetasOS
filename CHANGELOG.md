@@ -1,5 +1,15 @@
 # FumetaOS Changelog
 
+## v2.4.29
+
+### Changed
+
+- La apertura de la sesión SSH protegida con el Mac pasa de 3 a 10 intentos, tanto para Time Capsule como para el espejo general.
+- Se mantienen los 15 segundos entre intentos y los demás tiempos de espera.
+- No se añaden reintentos de transferencias ni borrados. Se conservan el cupo diario de 50, PS4 & PS5 exenta y los 20 borrados por carpeta de Time Capsule.
+
+Validado el cambio exacto de dos líneas, la sintaxis Bash y la sincronización entre proyecto, instalación y paquete. No se ha forzado un fallo real de diez intentos; aumentar los intentos no garantiza que macOS despierte. Sin cambios de horarios o ajustes de energía.
+
 ## v2.4.28
 
 ### Fixed
