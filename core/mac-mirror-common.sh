@@ -172,7 +172,7 @@ mac_mirror_abrir_sesion() {
 	local attempt=1 tick remote_command
 	local base_ssh=("${SSH_COMMAND[@]}")
 	remote_command="/usr/bin/caffeinate -i -s /bin/sh -c 'printf \"FUMETAOS_MAC_DESPIERTO\\n\"; exec /bin/cat >/dev/null'"
-	while [ "$attempt" -le 10 ]; do
+	while [ "$attempt" -le 15 ]; do
 		MAC_SESSION_DIR="$(mktemp -d /run/fumetaos-mac-session.XXXXXXXX)" || return 20
 		chmod 700 "$MAC_SESSION_DIR"
 		mkfifo -m 600 "$MAC_SESSION_DIR/entrada"
@@ -200,7 +200,7 @@ mac_mirror_abrir_sesion() {
 		done
 		mac_mirror_cerrar_sesion
 		SSH_COMMAND=("${base_ssh[@]}")
-		if [ "$attempt" -lt 10 ]; then
+		if [ "$attempt" -lt 15 ]; then
 			echo "⚠️ El Mac no confirmó la sesión; nuevo intento en 15 segundos."
 			sleep 15
 		fi

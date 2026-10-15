@@ -1,5 +1,15 @@
 # FumetaOS Changelog
 
+## v2.4.30
+
+### Changed
+
+- La apertura de la sesión SSH protegida con el Mac pasa de 10 a 15 intentos en ambas copias.
+- Se mantienen los 15 segundos entre intentos y los demás tiempos de espera.
+- Sin cambios en reintentos de transferencias, horarios ni límites de borrado: 50 diarios en el espejo general, PS4 & PS5 exenta y 20 por carpeta de Time Capsule.
+
+Validado el cambio exacto de dos líneas, la sintaxis Bash y una prueba aislada de 15 intentos fallidos, 14 pausas y limpieza de sesiones, sin red ni copias reales. No garantiza el despertar de macOS. La prueba antigua tests/test-nightly.sh falla también en HEAD porque no contempla el paso ya existente de limpieza Docker; no se modifica en esta versión.
+
 ## v2.4.29
 
 ### Changed
