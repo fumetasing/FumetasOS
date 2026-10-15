@@ -1,5 +1,18 @@
 # FumetaOS Changelog
 
+## v2.4.31
+
+### Changed
+
+- Ambas copias al Mac (Time Capsule y espejo general) permiten hasta 20 intentos para establecer la sesión SSH protegida.
+- Se conservan los 15 segundos entre intentos, la sesión persistente y la protección temporal contra reposo.
+- VERSION se actualiza a 2.4.31 y esta publicación incorpora el código de los 20 intentos.
+- Sin cambios en horarios, reintentos de transferencias o límites de borrado: 50 diarios fuera de PS4 & PS5, carpeta PS4 & PS5 exenta y 20 por carpeta de Time Capsule.
+
+El código de los 20 intentos ya estaba aplicado; esta versión lo consolida en una publicación nueva. Validado previamente con una prueba aislada de 20 intentos fallidos, 19 pausas y limpieza de sesiones, sin conexiones reales. Sintaxis y coincidencia del código entre proyecto, instalación y paquete comprobadas de nuevo. Aumentar los intentos no garantiza el despertar de macOS. Sin reinicios ni copias al publicar.
+
+La prueba antigua tests/test-nightly.sh mantiene un fallo preexistente: no contempla el paso de limpieza Docker ya presente en la cadena. No se modifica en esta versión.
+
 ## v2.4.30
 
 ### Changed
