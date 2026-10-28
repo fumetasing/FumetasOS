@@ -1,5 +1,15 @@
 # FumetaOS Changelog
 
+## v2.4.34
+
+### Added
+
+- CasaOS aparece en el apartado Actualizaciones del informe mediante consulta de la última release estable oficial de IceWhaleTech.
+- El aviso distingue versiones nuevas, ausencia de una nueva release y errores de consulta; excluye betas y borradores y compara versiones numéricamente.
+- Cuando hay una versión superior, indica revisar el parche local antes de actualizar. No sustituye el binario instalado ni activa actualizaciones automáticas.
+
+Validados once escenarios aislados, sintaxis Bash y consulta oficial real. Comprobador e informe sincronizados en proyecto, instalación y paquete. Sin reinicios, copias ni envío de informes.
+
 ## v2.4.33
 
 ### Fixed
