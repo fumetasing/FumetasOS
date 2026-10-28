@@ -59,6 +59,62 @@ mac_mirror_crear_ssh_command() {
 	)
 }
 
+mac_mirror_usb_remote_script() {
+	cat <<'REMOTE'
+punto_montaje()
+{
+    df -P "$1" |
+        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
+}
+
+# Esta espera empieza en el Mac, después de autenticar SSH.
+# No crear el destino: podría terminar en el disco interno si falta el USB.
+elapsed=0
+while :; do
+    mount_point=""
+    if [ -d "$ROOT" ]; then
+        mount_point="$(punto_montaje "$ROOT" 2>/dev/null)"
+    fi
+    if [ "$mount_point" = "$EXPECTED_MOUNT" ]; then
+        break
+    fi
+    if [ "$elapsed" -ge 180 ]; then
+        echo "Mac accesible; el USB no está montado en $EXPECTED_MOUNT tras 180 segundos" >&2
+        exit 20
+    fi
+    echo "⏳ Mac accesible; esperando el montaje del USB ($elapsed/180 segundos)." >&2
+    sleep 10
+    elapsed=$((elapsed + 10))
+done
+
+available_kb="$(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }')"
+
+case "$available_kb" in
+    ''|*[!0-9]*)
+        echo "No se pudo obtener el espacio libre del USB" >&2
+        exit 22
+        ;;
+esac
+
+if [ "$available_kb" -lt "$MINIMUM_FREE_KB" ]; then
+    echo "El USB tiene menos de 50 GiB libres" >&2
+    exit 22
+fi
+
+if [ ! -r "$ROOT" ] || [ ! -w "$ROOT" ] || [ ! -x "$ROOT" ]; then
+    echo "El destino del USB no tiene permisos suficientes: $ROOT" >&2
+    exit 21
+fi
+
+if [ "${SHOW_SPACE:-0}" -eq 1 ]; then
+    df -h "$ROOT" | awk 'NR == 2 { print $4 "|" $5 }'
+else
+    echo "💾 USB validado: $EXPECTED_MOUNT"
+fi
+REMOTE
+
+}
+
 mac_mirror_usb_disponible() {
 	local remote_script
 
@@ -67,53 +123,13 @@ mac_mirror_usb_disponible() {
 			printf 'ROOT=%q\n' "$MAC_ROOT"
 			printf 'EXPECTED_MOUNT=%q\n' "$MAC_USB_MOUNT"
 			printf 'MINIMUM_FREE_KB=%q\n' "$MINIMUM_FREE_KB"
-
-			cat <<'REMOTE'
-punto_montaje()
-{
-    df -P "$1" |
-        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
-}
-
-mount_point="$(punto_montaje "$ROOT")"
-
-if [ -z "$mount_point" ]; then
-    echo "No se pudo obtener el punto de montaje del destino: $ROOT" >&2
-    exit 20
-fi
-
-if [ "$mount_point" != "$EXPECTED_MOUNT" ]; then
-    echo "El destino está en $mount_point; se esperaba $EXPECTED_MOUNT" >&2
-    exit 20
-fi
-
-available_kb="$(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }')"
-
-case "$available_kb" in
-    ''|*[!0-9]*)
-        echo "No se pudo obtener el espacio libre del USB" >&2
-        exit 20
-        ;;
-esac
-
-if [ "$available_kb" -lt "$MINIMUM_FREE_KB" ]; then
-    echo "El USB tiene menos de 50 GiB libres" >&2
-    exit 20
-fi
-
-if [ ! -r "$ROOT" ] || [ ! -w "$ROOT" ] || [ ! -x "$ROOT" ]; then
-    echo "El destino del USB no tiene permisos suficientes: $ROOT" >&2
-    exit 20
-fi
-
-echo "💾 USB validado: $EXPECTED_MOUNT"
-REMOTE
+			mac_mirror_usb_remote_script
 		}
 	)"
 
 	mac_mirror_ssh_comprobar \
 		"$MAC_USER@$MAC_HOST" \
-		/bin/sh -s <<<"$remote_script"
+		/usr/bin/caffeinate -i -s /bin/sh -s <<<"$remote_script"
 }
 
 mac_mirror_contar_borrados() {

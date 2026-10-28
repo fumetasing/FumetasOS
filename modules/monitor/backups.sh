@@ -4,6 +4,8 @@
 # FumetaOS - Monitor de copias (solo consulta)
 ###########################################################
 
+source "$(dirname "${BASH_SOURCE[0]}")/../../core/mac-mirror-common.sh"
+
 ERROR=0
 NOW=$(date +%s)
 DAILY_LIMIT=$((30 * 3600))
@@ -229,15 +231,28 @@ mostrar_usb() {
 	local retry_delay=10
 	local wake_delay=15
 	local wake_status=0
+	local status=0
+	local attempts_done=0
+	local remote_script
 	local last_error="No disponible o no se pudo consultar"
 
+	remote_script="$(
+		printf '%s\n' \
+			'ROOT="/Users/fumetasing/FumetaOS-Server"' \
+			'EXPECTED_MOUNT="/Volumes/Data USB"' \
+			'MINIMUM_FREE_KB=0' \
+			'SHOW_SPACE=1'
+		mac_mirror_usb_remote_script
+	)"
+
 	while [ "$attempt" -le "$total_attempts" ]; do
+		attempts_done="$attempt"
 		output=""
 		free=""
 		used=""
 
 		if output=$(
-			timeout 25 ssh \
+			timeout 210 ssh \
 				-i /home/server/.ssh/id_ed25519_fumetaos_mac \
 				-o BatchMode=yes \
 				-o ConnectTimeout=10 \
@@ -245,14 +260,9 @@ mostrar_usb() {
 				-o ServerAliveCountMax=2 \
 				-o UserKnownHostsFile=/home/server/.ssh/known_hosts \
 				-o StrictHostKeyChecking=yes \
-				fumetasing@192.168.1.5 /bin/sh -s 2>/dev/null <<'REMOTE'
-TARGET="/Users/fumetasing/FumetaOS-Server"
-
-[ -d "$TARGET" ] || exit 20
-
-df -h "$TARGET" |
-    awk 'NR == 2 { print $4 "|" $5 }'
-REMOTE
+				fumetasing@192.168.1.5 \
+				/usr/bin/caffeinate -i -s /bin/sh -s \
+				2>/dev/null <<<"$remote_script"
 		); then
 			IFS='|' read -r free used <<<"$output"
 
@@ -271,14 +281,31 @@ REMOTE
 
 			last_error="No se pudo interpretar el espacio disponible"
 		else
-			last_error="No disponible o no se pudo consultar"
+			status=$?
+			case "$status" in
+			20)
+				last_error="Mac accesible; el USB no se montó tras esperar 180 segundos"
+				break
+				;;
+			21)
+				last_error="USB montado, pero sin permisos suficientes en el destino"
+				break
+				;;
+			22)
+				last_error="USB montado, pero no se pudo validar su espacio disponible"
+				break
+				;;
+			*)
+				last_error="No se pudo completar la conexión o consulta SSH al Mac"
+				;;
+			esac
 		fi
 
 		if [ "$attempt" -lt "$total_attempts" ]; then
 			if [ "$wake_status" -eq 0 ]; then
 				if despertar_mac; then
 					wake_status=1
-					last_error="Mac despertado por red; esperando SSH y el USB"
+					last_error="Despertar enviado; esperando SSH y el USB"
 					sleep "$wake_delay"
 				else
 					wake_status=2
@@ -295,11 +322,11 @@ REMOTE
 
 	echo "🔴 USB del Mac"
 	echo "   $last_error"
-	echo "   Intentos realizados: $total_attempts"
+	echo "   Intentos realizados: $attempts_done"
 
 	case "$wake_status" in
 	1)
-		echo "   Despertar por red: enviado, pero el USB no apareció"
+		echo "   Despertar por red: enviado"
 		;;
 	2)
 		echo "   Despertar por red: no se pudo enviar"

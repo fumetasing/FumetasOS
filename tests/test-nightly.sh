@@ -16,6 +16,7 @@ BASE_UNITS=(
     fumetaos-recovery-backup.service
     fumetaos-mac-backup.service
     fumetaos-system-upgrade.service
+    fumetaos-docker-clean.service
 )
 
 fail() {
@@ -79,7 +80,7 @@ run_case() {
     printf '%s\n' "$result"
 }
 
-# Jueves anterior al primer sábado: solo los cinco pasos diarios.
+# Jueves anterior al primer sábado: los seis pasos diarios.
 result="$(run_case weekday 4 2026-10 1)"
 assert_status weekday 0 "$result"
 assert_units weekday "${BASE_UNITS[@]}"
@@ -92,6 +93,13 @@ assert_status failure 20 "$result"
 assert_units failure "${BASE_UNITS[@]}"
 assert_field failure result failed
 assert_field failure failed 'Copia de recuperación'
+
+# La limpieza Docker forma parte de la cadena y su fallo también se registra.
+result="$(run_case docker_failure 4 2026-10 1 fumetaos-docker-clean.service)"
+assert_status docker_failure 20 "$result"
+assert_units docker_failure "${BASE_UNITS[@]}"
+assert_field docker_failure result failed
+assert_field docker_failure failed 'Limpieza segura de Docker'
 
 # El lunes se añade la verificación; SMART ya figura como intentado ese mes.
 mkdir -p "$TEST_DIR/monday/stamps"
@@ -132,4 +140,4 @@ assert_field verify_failure failed 'Verificación cifrada semanal'
 [ ! -e "$TEST_DIR/verify_failure/stamps/verify" ] ||
     fail 'verify_failure: se marcó una verificación fallida'
 
-echo '✅ Cadena nocturna: siete escenarios simulados correctos; ninguna tarea real iniciada.'
+echo '✅ Cadena nocturna: ocho escenarios simulados correctos; ninguna tarea real iniciada.'

@@ -1,5 +1,20 @@
 # FumetaOS Changelog
 
+## v2.4.33
+
+### Fixed
+
+- El informe y ambas copias al Mac esperan hasta 180 segundos al montaje del USB después de autenticar SSH, con comprobaciones cada 10 segundos y protección temporal contra reposo.
+- La comprobación del USB valida su punto de montaje real y diferencia errores de conexión, montaje, permisos y espacio disponible.
+
+### Changed
+
+- AdGuard Home aparece en Actualizaciones mediante consulta de la imagen estable oficial de Docker Hub, sin descargar ni instalar imágenes. Se compara la imagen realmente ejecutada para detectar también reconstrucciones de una misma versión.
+- Se retira el análisis histórico de fallos de CasaOS de las últimas 24 horas; se mantiene la comprobación del estado del servicio.
+- La prueba de la cadena nocturna contempla el paso de limpieza Docker y su posible fallo.
+
+Se conservan los 30 intentos SSH, horarios, reintentos de transferencias y cupos de borrado. Pruebas aisladas de USB y AdGuard, ocho escenarios de la cadena nocturna y cinco pruebas del guardián de Jellyfin superados. Proyecto, instalación y paquete comprobados. Esta publicación no ejecuta copias ni envía informes.
+
 ## v2.4.32
 
 ### Changed
