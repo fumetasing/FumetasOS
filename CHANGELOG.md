@@ -1,5 +1,14 @@
 # FumetaOS Changelog
 
+## v2.4.35
+
+### Added
+
+- Guía del perfil DNS de Movistar para Ubuntu, Docker, AdGuard Home, macOS y Tailscale, con comprobaciones y límites de alcance.
+- Perfil opcional de respaldo DNS para systemd-resolved; requiere instalación explícita del administrador.
+
+Los cambios DNS de este despliegue se conservan fuera del repositorio; no se publican credenciales ni se cambia automáticamente el proveedor de otras instalaciones. Se conservan los nombres internos, las copias, los horarios y el parche de CasaOS.
+
 ## v2.4.34
 
 ### Added
